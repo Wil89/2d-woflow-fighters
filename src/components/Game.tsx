@@ -147,8 +147,18 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       onGameStart: () => {},
       onError: (error) => console.error('Multiplayer error:', error),
       onLatencyUpdate: () => {},
+      // Guest receives game state from host
+      onGameStateSync: (state) => {
+        if (!isHost && state) {
+          gameStateRef.current = state as GameState;
+          // Sync phase state for UI
+          if (gameStateRef.current.gamePhase !== gamePhase) {
+            setGamePhase(gameStateRef.current.gamePhase);
+          }
+        }
+      },
     });
-  }, [gameMode]);
+  }, [gameMode, isHost, gamePhase]);
 
   // Play sound based on event type
   const playSoundEvent = useCallback((event: SoundEvent) => {
@@ -232,65 +242,70 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       lastPunchRef.current = inputRef.current.punch;
       lastKickRef.current = inputRef.current.kick;
 
-      // Handle online multiplayer input
-      let remoteInput: InputState | undefined;
+      // Online multiplayer with authoritative host
       if (gameMode === 'online') {
-        // Send our input to the remote player
+        // Always send our input
         frameCountRef.current++;
         multiplayerService.sendInput(frameCountRef.current, inputRef.current);
 
-        // Process remote input (only trigger punch/kick once per press)
-        remoteInput = {
-          ...remoteInputRef.current,
-          punch: remoteInputRef.current.punch && !lastRemotePunchRef.current,
-          kick: remoteInputRef.current.kick && !lastRemoteKickRef.current,
-        };
-        lastRemotePunchRef.current = remoteInputRef.current.punch;
-        lastRemoteKickRef.current = remoteInputRef.current.kick;
+        if (isHost) {
+          // HOST: Run game logic with both inputs
+          // Process remote input (guest's input controls the opponent)
+          const remoteInput: InputState = {
+            ...remoteInputRef.current,
+            punch: remoteInputRef.current.punch && !lastRemotePunchRef.current,
+            kick: remoteInputRef.current.kick && !lastRemoteKickRef.current,
+          };
+          lastRemotePunchRef.current = remoteInputRef.current.punch;
+          lastRemoteKickRef.current = remoteInputRef.current.kick;
 
-        // Swap player/opponent based on host status
-        // Host is player 1 (left side), guest is player 2 (right side)
-        if (!isHost) {
-          // If we're the guest, swap the inputs
-          const tempInput = input;
-          input = remoteInput;
-          remoteInput = tempInput;
+          const opponent = opponentRef.current;
+          const updateResult = updateGameState(
+            gameStateRef.current,
+            input,  // Host's input controls player (left)
+            playerCharacter.attacks,
+            opponent?.attacks || playerCharacter.attacks,
+            1 / 60,
+            gameMode,
+            remoteInput  // Guest's input controls opponent (right)
+          );
+          gameStateRef.current = updateResult.state;
+
+          // Play sound events
+          updateResult.soundEvents.forEach(playSoundEvent);
+
+          // Send game state to guest
+          multiplayerService.sendGameState(gameStateRef.current);
+
+          // Sync phase state
+          if (gameStateRef.current.gamePhase !== gamePhase) {
+            setGamePhase(gameStateRef.current.gamePhase);
+          }
+        }
+        // GUEST: State is updated via onGameStateSync callback, just render
+      } else {
+        // Offline modes (training, vs-cpu)
+        const opponent = opponentRef.current;
+        const updateResult = updateGameState(
+          gameStateRef.current,
+          input,
+          playerCharacter.attacks,
+          opponent?.attacks || playerCharacter.attacks,
+          1 / 60,
+          gameMode
+        );
+        gameStateRef.current = updateResult.state;
+
+        // Play sound events
+        updateResult.soundEvents.forEach(playSoundEvent);
+
+        // Sync phase state
+        if (gameStateRef.current.gamePhase !== gamePhase) {
+          setGamePhase(gameStateRef.current.gamePhase);
         }
       }
 
-      // Update game state
-      const opponent = opponentRef.current;
-
-      // For online guest, attacks need to match the swapped game state order
-      let playerAttacks = playerCharacter.attacks;
-      let opponentAttacks = opponent?.attacks || playerCharacter.attacks;
-      if (gameMode === 'online' && !isHost) {
-        // Guest: game state has player=hostChar, opponent=guestChar
-        // So player attacks = host's attacks (opponent), opponent attacks = guest's attacks (playerCharacter)
-        playerAttacks = opponent?.attacks || playerCharacter.attacks;
-        opponentAttacks = playerCharacter.attacks;
-      }
-
-      const updateResult = updateGameState(
-        gameStateRef.current,
-        input,
-        playerAttacks,
-        opponentAttacks,
-        1 / 60,
-        gameMode,
-        remoteInput
-      );
-      gameStateRef.current = updateResult.state;
-
-      // Play sound events
-      updateResult.soundEvents.forEach(playSoundEvent);
-
-      // Sync phase state
-      if (gameStateRef.current.gamePhase !== gamePhase) {
-        setGamePhase(gameStateRef.current.gamePhase);
-      }
-
-      // Render
+      // Render (both host and guest render their state)
       render(ctx, gameStateRef.current);
 
       animationId = requestAnimationFrame(gameLoop);

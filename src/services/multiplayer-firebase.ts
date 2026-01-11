@@ -13,6 +13,7 @@ export interface MultiplayerCallbacks {
   onGameStart: () => void;
   onError: (error: string) => void;
   onLatencyUpdate: (latency: number) => void;
+  onGameStateSync?: (state: unknown) => void; // For receiving game state from host
 }
 
 // Generate a short room code
@@ -364,6 +365,9 @@ export class MultiplayerFirebaseService {
           message.input as InputState
         );
         break;
+      case 'gameState':
+        this.callbacks?.onGameStateSync?.(message.state as unknown);
+        break;
       case 'ping':
         this.sendDirect({ type: 'pong', timestamp: message.timestamp });
         break;
@@ -458,6 +462,13 @@ export class MultiplayerFirebaseService {
   // Send input (via fast data channel)
   sendInput(frame: number, input: InputState) {
     this.sendDirect({ type: 'input', frame, input });
+  }
+
+  // Send game state (host only, for state sync)
+  sendGameState(state: unknown) {
+    if (this.isHost) {
+      this.sendDirect({ type: 'gameState', state });
+    }
   }
 
   // Send character selection (via Firebase for reliability)
