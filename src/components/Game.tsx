@@ -76,7 +76,17 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   useEffect(() => {
     const opponent = getOpponent();
     opponentRef.current = opponent;
-    gameStateRef.current = createInitialGameState(playerCharacter, opponent);
+
+    // For online mode, both players need the SAME game state perspective
+    // Host's character is always "player" (left side), Guest's character is always "opponent" (right side)
+    if (gameMode === 'online' && !isHost) {
+      // Guest: swap characters so both clients see the same game
+      // playerCharacter = guest's char, opponent = host's char
+      // We want: player = host's char (opponent), opponent = guest's char (playerCharacter)
+      gameStateRef.current = createInitialGameState(opponent, playerCharacter);
+    } else {
+      gameStateRef.current = createInitialGameState(playerCharacter, opponent);
+    }
 
     // Load background image
     const img = new Image();
@@ -120,7 +130,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     }, 1000);
 
     return () => clearInterval(introInterval);
-  }, [playerCharacter, map, getOpponent]);
+  }, [playerCharacter, map, getOpponent, gameMode, isHost]);
 
   // Setup multiplayer input callbacks for online mode
   useEffect(() => {
@@ -250,11 +260,22 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
 
       // Update game state
       const opponent = opponentRef.current;
+
+      // For online guest, attacks need to match the swapped game state order
+      let playerAttacks = playerCharacter.attacks;
+      let opponentAttacks = opponent?.attacks || playerCharacter.attacks;
+      if (gameMode === 'online' && !isHost) {
+        // Guest: game state has player=hostChar, opponent=guestChar
+        // So player attacks = host's attacks (opponent), opponent attacks = guest's attacks (playerCharacter)
+        playerAttacks = opponent?.attacks || playerCharacter.attacks;
+        opponentAttacks = playerCharacter.attacks;
+      }
+
       const updateResult = updateGameState(
         gameStateRef.current,
         input,
-        playerCharacter.attacks,
-        opponent?.attacks || playerCharacter.attacks,
+        playerAttacks,
+        opponentAttacks,
         1 / 60,
         gameMode,
         remoteInput

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { CharacterData, MapData } from '../types/game';
 import { characters, maps } from '../data/gameData';
 import { multiplayerService, type ConnectionStatus } from '../services/multiplayer-firebase';
@@ -31,6 +31,9 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
   const [isReady, setIsReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
 
+  // Track if we're transitioning to game (don't disconnect in that case)
+  const isStartingGameRef = useRef(false);
+
   const isHost = multiplayerService.getIsHost();
 
   // Setup multiplayer callbacks - only on mount
@@ -49,7 +52,10 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
     });
 
     return () => {
-      multiplayerService.disconnect();
+      // Only disconnect if we're NOT transitioning to the game
+      if (!isStartingGameRef.current) {
+        multiplayerService.disconnect();
+      }
     };
   }, []); // Empty deps - only run once on mount
 
@@ -57,6 +63,7 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
   useEffect(() => {
     const handleGameStartCallback = () => {
       if (opponentCharacter) {
+        isStartingGameRef.current = true; // Don't disconnect when unmounting
         onGameStart(
           myCharacter,
           opponentCharacter,
@@ -130,6 +137,7 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
 
   const handleStartGame = useCallback(() => {
     if (isHost && isReady && opponentReady && opponentCharacter) {
+      isStartingGameRef.current = true; // Don't disconnect when unmounting
       multiplayerService.sendGameStart();
       onGameStart(myCharacter, opponentCharacter, selectedMap, true, roomCode);
     }
