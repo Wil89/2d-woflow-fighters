@@ -49,8 +49,9 @@ export class MultiplayerService {
     this.callbacks = callbacks;
   }
 
-  // Create a room as host
-  async createRoom(): Promise<string> {
+  // Create a room as host with retry logic
+  async createRoom(retryCount = 0): Promise<string> {
+    const MAX_RETRIES = 3;
     this.isHost = true;
     this.roomCode = generateRoomCode();
 
@@ -59,11 +60,39 @@ export class MultiplayerService {
 
       // Create peer with room code as ID
       const peerId = `fighter-${this.roomCode}`;
-      this.peer = new Peer(peerId, {
+
+      // Use multiple PeerJS servers for reliability
+      const peerConfig = {
         debug: 1,
-      });
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+          ]
+        }
+      };
+
+      this.peer = new Peer(peerId, peerConfig);
+
+      // Timeout for connection
+      const timeout = setTimeout(() => {
+        if (this.peer && !this.peer.open) {
+          this.peer.destroy();
+          if (retryCount < MAX_RETRIES) {
+            console.log(`Retrying connection (${retryCount + 1}/${MAX_RETRIES})...`);
+            this.roomCode = generateRoomCode(); // Generate new code for retry
+            this.createRoom(retryCount + 1).then(resolve).catch(reject);
+          } else {
+            this.callbacks?.onError('Could not connect to server. Please try again.');
+            this.callbacks?.onStatusChange('error');
+            reject(new Error('Connection timeout after retries'));
+          }
+        }
+      }, 10000);
 
       this.peer.on('open', () => {
+        clearTimeout(timeout);
         this.callbacks?.onStatusChange('waiting');
         resolve(this.roomCode);
       });
@@ -74,30 +103,59 @@ export class MultiplayerService {
       });
 
       this.peer.on('error', (err) => {
+        clearTimeout(timeout);
         console.error('Peer error:', err);
-        this.callbacks?.onError(err.message || 'Connection error');
-        this.callbacks?.onStatusChange('error');
-        reject(err);
+
+        // Retry on certain errors
+        if (retryCount < MAX_RETRIES && (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error')) {
+          console.log(`Retrying after error (${retryCount + 1}/${MAX_RETRIES})...`);
+          this.roomCode = generateRoomCode();
+          setTimeout(() => {
+            this.createRoom(retryCount + 1).then(resolve).catch(reject);
+          }, 1000);
+        } else {
+          this.callbacks?.onError(err.message || 'Connection error');
+          this.callbacks?.onStatusChange('error');
+          reject(err);
+        }
       });
 
       this.peer.on('disconnected', () => {
-        this.callbacks?.onStatusChange('disconnected');
+        // Try to reconnect
+        if (this.peer && !this.peer.destroyed) {
+          this.peer.reconnect();
+        } else {
+          this.callbacks?.onStatusChange('disconnected');
+        }
       });
     });
   }
 
-  // Join a room as guest
-  async joinRoom(code: string): Promise<void> {
+  // Join a room as guest with retry logic
+  async joinRoom(code: string, retryCount = 0): Promise<void> {
+    const MAX_RETRIES = 3;
     this.isHost = false;
     this.roomCode = code.toUpperCase();
 
     return new Promise((resolve, reject) => {
       this.callbacks?.onStatusChange('connecting');
 
-      // Create peer with random ID
-      this.peer = new Peer({
+      // Use same config for reliability
+      const peerConfig = {
         debug: 1,
-      });
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+          ]
+        }
+      };
+
+      // Create peer with random ID
+      this.peer = new Peer(peerConfig);
+
+      let connectionTimeout: ReturnType<typeof setTimeout>;
 
       this.peer.on('open', () => {
         // Connect to host
@@ -106,12 +164,30 @@ export class MultiplayerService {
           reliable: true,
         });
 
+        connectionTimeout = setTimeout(() => {
+          if (!this.connection?.open) {
+            if (retryCount < MAX_RETRIES) {
+              console.log(`Retrying join (${retryCount + 1}/${MAX_RETRIES})...`);
+              this.peer?.destroy();
+              setTimeout(() => {
+                this.joinRoom(code, retryCount + 1).then(resolve).catch(reject);
+              }, 1000);
+            } else {
+              this.callbacks?.onError('Connection timeout. Make sure the room code is correct.');
+              this.callbacks?.onStatusChange('error');
+              reject(new Error('Connection timeout'));
+            }
+          }
+        }, 10000);
+
         this.connection.on('open', () => {
+          clearTimeout(connectionTimeout);
           this.setupConnection();
           resolve();
         });
 
         this.connection.on('error', (err) => {
+          clearTimeout(connectionTimeout);
           console.error('Connection error:', err);
           this.callbacks?.onError('Failed to connect to room');
           this.callbacks?.onStatusChange('error');
@@ -122,7 +198,13 @@ export class MultiplayerService {
       this.peer.on('error', (err) => {
         console.error('Peer error:', err);
         if (err.type === 'peer-unavailable') {
-          this.callbacks?.onError('Room not found');
+          this.callbacks?.onError('Room not found. Check the code and try again.');
+        } else if (retryCount < MAX_RETRIES && (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error')) {
+          console.log(`Retrying after error (${retryCount + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => {
+            this.joinRoom(code, retryCount + 1).then(resolve).catch(reject);
+          }, 1000);
+          return;
         } else {
           this.callbacks?.onError(err.message || 'Connection error');
         }
@@ -130,14 +212,11 @@ export class MultiplayerService {
         reject(err);
       });
 
-      // Timeout for connection
-      setTimeout(() => {
-        if (!this.connection?.open) {
-          this.callbacks?.onError('Connection timeout');
-          this.callbacks?.onStatusChange('error');
-          reject(new Error('Connection timeout'));
+      this.peer.on('disconnected', () => {
+        if (this.peer && !this.peer.destroyed) {
+          this.peer.reconnect();
         }
-      }, 10000);
+      });
     });
   }
 
