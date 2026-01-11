@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CharacterData, MapData } from '../types/game';
 import { characters, maps } from '../data/gameData';
-import { multiplayerService, type ConnectionStatus } from '../services/multiplayer';
+import { multiplayerService, type ConnectionStatus } from '../services/multiplayer-firebase';
 
 interface OnlineLobbyProps {
   onGameStart: (
@@ -33,7 +33,7 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
 
   const isHost = multiplayerService.getIsHost();
 
-  // Setup multiplayer callbacks
+  // Setup multiplayer callbacks - only on mount
   useEffect(() => {
     multiplayerService.setCallbacks({
       onStatusChange: setStatus,
@@ -42,15 +42,7 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
       onRemoteMap: (map) => setSelectedMap(map),
       onRemoteReady: () => setOpponentReady(true),
       onGameStart: () => {
-        if (opponentCharacter) {
-          onGameStart(
-            myCharacter,
-            opponentCharacter,
-            selectedMap,
-            isHost,
-            roomCode
-          );
-        }
+        // Will be handled by startGameRef
       },
       onError: setError,
       onLatencyUpdate: setLatency,
@@ -59,7 +51,33 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
     return () => {
       multiplayerService.disconnect();
     };
-  }, [myCharacter, opponentCharacter, selectedMap, isHost, roomCode, onGameStart]);
+  }, []); // Empty deps - only run once on mount
+
+  // Handle game start with current state values
+  useEffect(() => {
+    const handleGameStartCallback = () => {
+      if (opponentCharacter) {
+        onGameStart(
+          myCharacter,
+          opponentCharacter,
+          selectedMap,
+          multiplayerService.getIsHost(),
+          multiplayerService.getRoomCode()
+        );
+      }
+    };
+
+    multiplayerService.setCallbacks({
+      onStatusChange: setStatus,
+      onRemoteInput: () => {},
+      onRemoteCharacter: (char) => setOpponentCharacter(char),
+      onRemoteMap: (map) => setSelectedMap(map),
+      onRemoteReady: () => setOpponentReady(true),
+      onGameStart: handleGameStartCallback,
+      onError: setError,
+      onLatencyUpdate: setLatency,
+    });
+  }, [myCharacter, opponentCharacter, selectedMap, onGameStart]);
 
   // Send character selection when it changes
   useEffect(() => {

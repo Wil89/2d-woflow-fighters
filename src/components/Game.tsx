@@ -13,7 +13,7 @@ import {
   playVictorySound,
   playCountdownSound,
 } from '../utils/sounds';
-import { multiplayerService } from '../services/multiplayer';
+import { multiplayerService } from '../services/multiplayer-firebase';
 
 interface GameProps {
   playerCharacter: CharacterData;
