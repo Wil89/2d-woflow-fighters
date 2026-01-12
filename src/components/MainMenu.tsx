@@ -66,7 +66,7 @@ export const MainMenu = ({ onStart }: MainMenuProps) => {
 
         <div className="controls-hint">
           <div className="control-row">
-            <span className="key">W A S D</span>
+            <span className="key">← ↑ ↓ →</span>
             <span className="action">MOVE</span>
           </div>
           <div className="control-row">

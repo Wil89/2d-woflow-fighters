@@ -217,11 +217,15 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     const handleKeyDown = (e: KeyboardEvent) => {
       // Initialize audio on first key press
       initAudio();
+      // Prevent default for arrow keys to avoid page scrolling
+      if (e.key.startsWith('Arrow')) {
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowLeft') inputRef.current.left = true;
+      if (e.key === 'ArrowRight') inputRef.current.right = true;
+      if (e.key === 'ArrowUp') inputRef.current.up = true;
+      if (e.key === 'ArrowDown') inputRef.current.down = true;
       const key = e.key.toLowerCase();
-      if (key === 'a') inputRef.current.left = true;
-      if (key === 'd') inputRef.current.right = true;
-      if (key === 'w') inputRef.current.up = true;
-      if (key === 's') inputRef.current.down = true;
       if (key === 'f') inputRef.current.punch = true;
       if (key === 'g') inputRef.current.kick = true;
       if (key === 'h') inputRef.current.special = true;
@@ -229,11 +233,11 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') inputRef.current.left = false;
+      if (e.key === 'ArrowRight') inputRef.current.right = false;
+      if (e.key === 'ArrowUp') inputRef.current.up = false;
+      if (e.key === 'ArrowDown') inputRef.current.down = false;
       const key = e.key.toLowerCase();
-      if (key === 'a') inputRef.current.left = false;
-      if (key === 'd') inputRef.current.right = false;
-      if (key === 'w') inputRef.current.up = false;
-      if (key === 's') inputRef.current.down = false;
       if (key === 'f') inputRef.current.punch = false;
       if (key === 'g') inputRef.current.kick = false;
       if (key === 'h') inputRef.current.special = false;
