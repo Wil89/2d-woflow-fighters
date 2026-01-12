@@ -13,7 +13,13 @@ const createAttack = (
     medium: { startup: 5, active: 5, recovery: 12 },
     slow: { startup: 8, active: 6, recovery: 16 },
   };
-  const config = speedConfig[speed];
+  // Specials are slower but more powerful
+  const specialConfig = {
+    fast: { startup: 6, active: 6, recovery: 14 },
+    medium: { startup: 10, active: 8, recovery: 18 },
+    slow: { startup: 14, active: 10, recovery: 22 },
+  };
+  const config = type === 'special' ? specialConfig[speed] : speedConfig[speed];
   return {
     name,
     damage,
@@ -37,9 +43,11 @@ export const characters: CharacterData[] = [
     country: 'USA',
     countryFlag: '🇺🇸',
     jobTitle: 'CTO & FOUNDER',
+    projectileText: 'RAILS',
     attacks: {
       punch: createAttack('Rails Punch', 10, 70, 8, 'punch', 'fast'),
       kick: createAttack('Deploy Kick', 14, 85, 10, 'kick', 'fast'),
+      special: createAttack('PRODUCTION DEPLOY', 18, 120, 15, 'special', 'medium'),
     },
     stats: { power: 5, speed: 9, defense: 6 },
   },
@@ -54,9 +62,11 @@ export const characters: CharacterData[] = [
     country: 'United Kingdom',
     countryFlag: '🇬🇧',
     jobTitle: 'CEO & SALES',
+    projectileText: 'IPO',
     attacks: {
       punch: createAttack('Deal Closer', 15, 80, 12, 'punch', 'medium'),
       kick: createAttack('Revenue Kick', 18, 90, 15, 'kick', 'slow'),
+      special: createAttack('HOSTILE TAKEOVER', 22, 130, 18, 'special', 'slow'),
     },
     stats: { power: 9, speed: 6, defense: 5 },
   },
@@ -71,9 +81,11 @@ export const characters: CharacterData[] = [
     country: 'India',
     countryFlag: '🇮🇳',
     jobTitle: 'FULLSTACK DEV',
+    projectileText: 'API',
     attacks: {
       punch: createAttack('Stack Overflow', 11, 75, 9, 'punch', 'fast'),
       kick: createAttack('API Kick', 15, 80, 12, 'kick', 'fast'),
+      special: createAttack('RECURSIVE FUNCTION', 16, 110, 14, 'special', 'fast'),
     },
     stats: { power: 6, speed: 8, defense: 6 },
   },
@@ -88,9 +100,11 @@ export const characters: CharacterData[] = [
     country: 'Hong Kong',
     countryFlag: '🇭🇰',
     jobTitle: 'SR. BACKEND DEV',
+    projectileText: 'JOIN',
     attacks: {
       punch: createAttack('Query Punch', 12, 70, 10, 'punch', 'fast'),
       kick: createAttack('Cache Kick', 14, 85, 11, 'kick', 'fast'),
+      special: createAttack('SQL INJECTION', 15, 115, 13, 'special', 'fast'),
     },
     stats: { power: 6, speed: 9, defense: 5 },
   },
@@ -105,9 +119,11 @@ export const characters: CharacterData[] = [
     country: 'China',
     countryFlag: '🇨🇳',
     jobTitle: 'SALES & PM',
+    projectileText: 'KPI',
     attacks: {
       punch: createAttack('Roadmap Slam', 18, 90, 16, 'punch', 'slow'),
       kick: createAttack('Sprint Stomp', 20, 95, 18, 'kick', 'slow'),
+      special: createAttack('SCOPE CREEP', 24, 140, 20, 'special', 'slow'),
     },
     stats: { power: 10, speed: 4, defense: 6 },
   },
@@ -122,9 +138,11 @@ export const characters: CharacterData[] = [
     country: 'Bosnia',
     countryFlag: '🇧🇦',
     jobTitle: 'QA ENGINEER',
+    projectileText: 'BUG',
     attacks: {
       punch: createAttack('Bug Report', 16, 80, 13, 'punch', 'medium'),
       kick: createAttack('Test Fail Kick', 19, 85, 15, 'kick', 'slow'),
+      special: createAttack('REGRESSION TEST', 20, 125, 16, 'special', 'medium'),
     },
     stats: { power: 9, speed: 5, defense: 6 },
   },
@@ -139,9 +157,11 @@ export const characters: CharacterData[] = [
     country: 'USA',
     countryFlag: '🇺🇸',
     jobTitle: 'FRONTEND LEAD',
+    projectileText: 'FLEX',
     attacks: {
       punch: createAttack('Pixel Punch', 12, 75, 10, 'punch', 'medium'),
       kick: createAttack('Component Kick', 16, 80, 14, 'kick', 'medium'),
+      special: createAttack('NPM INSTALL', 18, 120, 15, 'special', 'medium'),
     },
     stats: { power: 7, speed: 5, defense: 8 },
   },
@@ -156,9 +176,11 @@ export const characters: CharacterData[] = [
     country: 'USA',
     countryFlag: '🇺🇸',
     jobTitle: 'PRODUCT MANAGER',
+    projectileText: 'JIRA',
     attacks: {
       punch: createAttack('Backlog Bash', 14, 85, 11, 'punch', 'medium'),
       kick: createAttack('Scrum Kick', 17, 90, 13, 'kick', 'medium'),
+      special: createAttack('SPRINT OVERFLOW', 19, 125, 16, 'special', 'medium'),
     },
     stats: { power: 8, speed: 7, defense: 5 },
   },
@@ -188,5 +210,38 @@ export const maps: MapData[] = [
   },
 ];
 
-export const HIT_SOUNDS = ['WHAM!', 'POW!', 'BAM!', 'CRACK!', 'BOOM!', 'SMASH!', 'THWACK!'];
-export const COMBO_TEXTS = ['NICE!', 'GREAT!', 'AWESOME!', 'AMAZING!', 'INCREDIBLE!', 'LEGENDARY!'];
+export const HIT_SOUNDS = [
+  'SEGFAULT!',
+  '404!',
+  'STACK OVERFLOW!',
+  'NULL POINTER!',
+  'INFINITE LOOP!',
+  'MEMORY LEAK!',
+  'RACE CONDITION!',
+  'DEADLOCK!',
+  'HIGH LATENCY!',
+  'TIMEOUT!',
+  'SYNTAX ERROR!',
+  'EXCEPTION!',
+  'BUFFER OVERFLOW!',
+  'DEPRECATED!',
+  'CORE DUMP!',
+  'FATAL ERROR!',
+  'OUT OF MEMORY!',
+  'INDEX OOB!',
+  'TYPE ERROR!',
+  'NaN!',
+  'UNDEFINED!',
+  'MERGE CONFLICT!',
+  'GIT PUSH -F!',
+  'DROP TABLE!',
+  'RM -RF!',
+];
+export const COMBO_TEXTS = [
+  'REFACTORED!',
+  'OPTIMIZED!',
+  'DEPLOYED!',
+  'SHIPPED!',
+  'MERGED TO MAIN!',
+  '10X DEV!',
+];

@@ -2,6 +2,7 @@ import type {
   Fighter,
   GameState,
   Particle,
+  Projectile,
   TextPopup,
   CharacterData,
   Attack,
@@ -18,10 +19,15 @@ const ARENA_WIDTH = 1200;
 const ARENA_PADDING = 50;
 const FIGHTER_WIDTH = 80;
 const FIGHTER_HEIGHT = 140;
-const JUMP_FORCE = -12;
+const JUMP_FORCE = -16; // Higher jump to dodge projectiles
 const MOVE_SPEED = 2.2;
 const AIR_CONTROL = 0.25;
 const FRICTION = 0.9;
+
+// Special meter constants
+const SPECIAL_METER_COST = 50; // Cost to use a special
+const METER_GAIN_ON_HIT = 15; // Meter gained when landing a hit
+const METER_GAIN_ON_DAMAGE = 10; // Meter gained when taking damage
 
 export const createFighter = (
   characterData: CharacterData,
@@ -45,6 +51,7 @@ export const createFighter = (
   isGrounded: true,
   hitStun: 0,
   comboCount: 0,
+  specialMeter: 0, // Start with no meter
 });
 
 export const createInitialGameState = (
@@ -54,6 +61,7 @@ export const createInitialGameState = (
   player: createFighter(playerData, 250, 'right'),
   opponent: createFighter(opponentData, 950, 'left'),
   particles: [],
+  projectiles: [],
   textPopups: [],
   camera: {
     x: 0,
@@ -186,6 +194,155 @@ const createHitPopup = (
   type,
 });
 
+// Projectile constants
+const PROJECTILE_SPEED = 5; // Slower for readability
+const PROJECTILE_SIZE = 50;
+const PROJECTILE_LIFE = 180; // frames before auto-destroy (longer for slower speed)
+
+const createProjectile = (
+  fighter: Fighter,
+  attack: Attack,
+  owner: 'player' | 'opponent',
+  text: string,
+  color: string
+): Projectile => {
+  const direction = fighter.facing === 'right' ? 1 : -1;
+  return {
+    id: `proj-${Date.now()}-${Math.random()}`,
+    x: fighter.position.x + direction * 50,
+    y: fighter.position.y - FIGHTER_HEIGHT * 0.6,
+    vx: PROJECTILE_SPEED * direction,
+    owner,
+    damage: attack.damage,
+    text,
+    color,
+    life: PROJECTILE_LIFE,
+  };
+};
+
+const updateProjectiles = (projectiles: Projectile[]): Projectile[] => {
+  return projectiles
+    .map((p) => ({
+      ...p,
+      x: p.x + p.vx,
+      life: p.life - 1,
+    }))
+    .filter((p) => p.life > 0 && p.x > -100 && p.x < ARENA_WIDTH + 100);
+};
+
+const getProjectileHitBox = (projectile: Projectile): HitBox => ({
+  x: projectile.x - PROJECTILE_SIZE / 2,
+  y: projectile.y - PROJECTILE_SIZE / 2,
+  width: PROJECTILE_SIZE,
+  height: PROJECTILE_SIZE,
+});
+
+const checkProjectileHits = (
+  state: GameState
+): { state: GameState; newParticles: Particle[]; newPopups: TextPopup[]; soundEvents: SoundEvent[] } => {
+  let newState = { ...state };
+  const newParticles: Particle[] = [];
+  const newPopups: TextPopup[] = [];
+  const soundEvents: SoundEvent[] = [];
+  const projectilesToRemove: string[] = [];
+
+  for (const projectile of newState.projectiles) {
+    const projectileBox = getProjectileHitBox(projectile);
+
+    // Check if player projectile hits opponent
+    if (projectile.owner === 'player') {
+      const targetBox = getFighterHitBox(newState.opponent);
+
+      if (boxesIntersect(projectileBox, targetBox)) {
+        projectilesToRemove.push(projectile.id);
+        const hitX = projectile.x;
+        const hitY = projectile.y;
+
+        if (newState.opponent.isBlocking) {
+          // Blocked
+          newState.opponent.health -= projectile.damage * 0.2;
+          newState.opponent.velocity.x = (projectile.vx > 0 ? 1 : -1) * 5;
+          newState.opponent.hitStun = 8;
+          newParticles.push(...createWhiffParticles(hitX, hitY));
+          newPopups.push(createHitPopup('BLOCK!', hitX, hitY - 50, 'hit'));
+          soundEvents.push('block');
+        } else {
+          // Hit!
+          newState.opponent.health -= projectile.damage;
+          newState.opponent.velocity.x = (projectile.vx > 0 ? 1 : -1) * 12;
+          newState.opponent.velocity.y = -5;
+          newState.opponent.hitStun = 25;
+          newState.opponent.state = 'hit';
+          newState.opponent.comboCount++;
+
+          // Meter gain: attacker gains meter for landing hit, defender gains for taking damage
+          newState.player.specialMeter = Math.min(100, newState.player.specialMeter + METER_GAIN_ON_HIT);
+          newState.opponent.specialMeter = Math.min(100, newState.opponent.specialMeter + METER_GAIN_ON_DAMAGE);
+
+          newParticles.push(...createHitParticles(hitX, hitY, projectile.color));
+          newPopups.push(createHitPopup(projectile.text + '!', hitX, hitY - 60, 'hit'));
+
+          if (newState.opponent.comboCount > 1) {
+            const comboText = COMBO_TEXTS[Math.min(newState.opponent.comboCount - 2, COMBO_TEXTS.length - 1)];
+            newPopups.push(createHitPopup(`${newState.opponent.comboCount} HIT ${comboText}`, hitX, hitY - 120, 'combo'));
+          }
+
+          newState.camera.shake = Math.min(25, newState.camera.shake + projectile.damage * 0.7);
+          soundEvents.push('special');
+        }
+      }
+    }
+    // Check if opponent projectile hits player
+    else if (projectile.owner === 'opponent') {
+      const targetBox = getFighterHitBox(newState.player);
+
+      if (boxesIntersect(projectileBox, targetBox)) {
+        projectilesToRemove.push(projectile.id);
+        const hitX = projectile.x;
+        const hitY = projectile.y;
+
+        if (newState.player.isBlocking) {
+          // Blocked
+          newState.player.health -= projectile.damage * 0.2;
+          newState.player.velocity.x = (projectile.vx > 0 ? 1 : -1) * 5;
+          newState.player.hitStun = 8;
+          newParticles.push(...createWhiffParticles(hitX, hitY));
+          newPopups.push(createHitPopup('BLOCK!', hitX, hitY - 50, 'hit'));
+          soundEvents.push('block');
+        } else {
+          // Hit!
+          newState.player.health -= projectile.damage;
+          newState.player.velocity.x = (projectile.vx > 0 ? 1 : -1) * 12;
+          newState.player.velocity.y = -5;
+          newState.player.hitStun = 25;
+          newState.player.state = 'hit';
+          newState.player.comboCount++;
+
+          // Meter gain: attacker gains meter for landing hit, defender gains for taking damage
+          newState.opponent.specialMeter = Math.min(100, newState.opponent.specialMeter + METER_GAIN_ON_HIT);
+          newState.player.specialMeter = Math.min(100, newState.player.specialMeter + METER_GAIN_ON_DAMAGE);
+
+          newParticles.push(...createHitParticles(hitX, hitY, projectile.color));
+          newPopups.push(createHitPopup(projectile.text + '!', hitX, hitY - 60, 'hit'));
+
+          if (newState.player.comboCount > 1) {
+            const comboText = COMBO_TEXTS[Math.min(newState.player.comboCount - 2, COMBO_TEXTS.length - 1)];
+            newPopups.push(createHitPopup(`${newState.player.comboCount} HIT ${comboText}`, hitX, hitY - 120, 'combo'));
+          }
+
+          newState.camera.shake = Math.min(25, newState.camera.shake + projectile.damage * 0.7);
+          soundEvents.push('special');
+        }
+      }
+    }
+  }
+
+  // Remove hit projectiles
+  newState.projectiles = newState.projectiles.filter(p => !projectilesToRemove.includes(p.id));
+
+  return { state: newState, newParticles, newPopups, soundEvents };
+};
+
 export interface InputState {
   left: boolean;
   right: boolean;
@@ -193,6 +350,8 @@ export interface InputState {
   down: boolean;
   punch: boolean;
   kick: boolean;
+  special: boolean;
+  block: boolean;
 }
 
 export interface GameUpdateResult {
@@ -203,17 +362,20 @@ export interface GameUpdateResult {
 export const updateGameState = (
   state: GameState,
   playerInput: InputState,
-  playerAttacks: { punch: Attack; kick: Attack },
-  opponentAttacks: { punch: Attack; kick: Attack },
+  playerAttacks: { punch: Attack; kick: Attack; special: Attack },
+  opponentAttacks: { punch: Attack; kick: Attack; special: Attack },
   _deltaTime: number,
   gameMode: GameMode = 'vs-cpu',
-  remoteInput?: InputState // For online multiplayer
+  remoteInput?: InputState, // For online multiplayer
+  playerProjectileText: string = 'SPECIAL',
+  opponentProjectileText: string = 'SPECIAL'
 ): GameUpdateResult => {
   if (state.gamePhase === 'victory') {
     return {
       state: {
         ...state,
         particles: updateParticles(state.particles),
+        projectiles: updateProjectiles(state.projectiles),
         textPopups: updateTextPopups(state.textPopups),
       },
       soundEvents: [],
@@ -222,6 +384,7 @@ export const updateGameState = (
 
   let newState = { ...state };
   const soundEvents: SoundEvent[] = [];
+  let newProjectiles: Projectile[] = [];
 
   // Apply slow motion
   const timeScale = newState.slowMo;
@@ -232,13 +395,27 @@ export const updateGameState = (
   }
 
   // Update fighters
-  newState.player = updateFighter(
+  const playerResult = updateFighter(
     newState.player,
     playerInput,
     playerAttacks,
     timeScale,
     newState.gamePhase
   );
+  newState.player = playerResult.fighter;
+
+  // Spawn player projectile if special was just started
+  if (playerResult.spawnedSpecial) {
+    const projectile = createProjectile(
+      newState.player,
+      playerAttacks.special,
+      'player',
+      playerProjectileText,
+      newState.player.color
+    );
+    newProjectiles.push(projectile);
+    soundEvents.push('special');
+  }
 
   // Determine opponent input based on game mode
   let opponentInput: InputState;
@@ -253,13 +430,27 @@ export const updateGameState = (
     opponentInput = calculateAIInput(newState.opponent, newState.player);
   }
 
-  newState.opponent = updateFighter(
+  const opponentResult = updateFighter(
     newState.opponent,
     opponentInput,
     opponentAttacks,
     timeScale,
     newState.gamePhase
   );
+  newState.opponent = opponentResult.fighter;
+
+  // Spawn opponent projectile if special was just started
+  if (opponentResult.spawnedSpecial) {
+    const projectile = createProjectile(
+      newState.opponent,
+      opponentAttacks.special,
+      'opponent',
+      opponentProjectileText,
+      newState.opponent.color
+    );
+    newProjectiles.push(projectile);
+    soundEvents.push('special');
+  }
 
   // Face each other
   if (newState.player.state !== 'hit' && newState.player.state !== 'attacking') {
@@ -269,7 +460,20 @@ export const updateGameState = (
     newState.opponent.facing = newState.opponent.position.x < newState.player.position.x ? 'right' : 'left';
   }
 
-  // Check for hits
+  // Add new projectiles
+  newState.projectiles = [...newState.projectiles, ...newProjectiles];
+
+  // Update projectiles
+  newState.projectiles = updateProjectiles(newState.projectiles);
+
+  // Check for projectile hits
+  const projectileHitResult = checkProjectileHits(newState);
+  newState = projectileHitResult.state;
+  newState.particles = [...newState.particles, ...projectileHitResult.newParticles];
+  newState.textPopups = [...newState.textPopups, ...projectileHitResult.newPopups];
+  soundEvents.push(...projectileHitResult.soundEvents);
+
+  // Check for melee hits (excludes specials which use projectiles)
   const hitResult = checkHits(newState);
   newState = hitResult.state;
   newState.particles = [...newState.particles, ...hitResult.newParticles];
@@ -315,19 +519,25 @@ export const updateGameState = (
   return { state: newState, soundEvents };
 };
 
+interface FighterUpdateResult {
+  fighter: Fighter;
+  spawnedSpecial: boolean;
+}
+
 const updateFighter = (
   fighter: Fighter,
   input: InputState,
-  attacks: { punch: Attack; kick: Attack },
+  attacks: { punch: Attack; kick: Attack; special: Attack },
   timeScale: number,
   gamePhase: string
-): Fighter => {
+): FighterUpdateResult => {
   let f = { ...fighter };
+  let spawnedSpecial = false;
 
   if (gamePhase === 'intro' || gamePhase === 'victory' || gamePhase === 'ko') {
     // Just animate idle or victory
     f.stateFrame++;
-    return f;
+    return { fighter: f, spawnedSpecial };
   }
 
   // Update hitstun
@@ -352,7 +562,14 @@ const updateFighter = (
     }
 
     // Handle input
-    if (input.punch && f.isGrounded) {
+    if (input.special && f.isGrounded && f.specialMeter >= SPECIAL_METER_COST) {
+      f.state = 'attacking';
+      f.currentAttack = attacks.special;
+      f.stateFrame = 0;
+      f.velocity.x *= 0.2; // Specials root you more
+      f.specialMeter -= SPECIAL_METER_COST; // Consume meter
+      spawnedSpecial = true; // Signal to spawn a projectile
+    } else if (input.punch && f.isGrounded) {
       f.state = 'attacking';
       f.currentAttack = attacks.punch;
       f.stateFrame = 0;
@@ -380,8 +597,8 @@ const updateFighter = (
       if (f.isGrounded) f.state = 'walking';
     }
 
-    // Blocking
-    f.isBlocking = input.down && f.isGrounded && f.state !== 'attacking';
+    // Blocking (dedicated block key)
+    f.isBlocking = input.block && f.isGrounded && f.state !== 'attacking';
     if (f.isBlocking) {
       f.state = 'blocking';
       f.velocity.x *= 0.5;
@@ -415,7 +632,7 @@ const updateFighter = (
 
   f.stateFrame++;
 
-  return f;
+  return { fighter: f, spawnedSpecial };
 };
 
 const getTotalAttackFrames = (attack: Attack | null): number => {
@@ -426,6 +643,8 @@ const getTotalAttackFrames = (attack: Attack | null): number => {
 const isAttackActive = (fighter: Fighter): boolean => {
   if (!fighter.currentAttack || fighter.state !== 'attacking') return false;
   const attack = fighter.currentAttack;
+  // Special attacks use projectiles, not melee hitboxes
+  if (attack.type === 'special') return false;
   return (
     fighter.stateFrame >= attack.startup &&
     fighter.stateFrame < attack.startup + attack.active
@@ -467,6 +686,10 @@ const checkHits = (
         newState.opponent.state = 'hit';
         newState.opponent.comboCount++;
 
+        // Meter gain: attacker gains meter for landing hit, defender gains for taking damage
+        newState.player.specialMeter = Math.min(100, newState.player.specialMeter + METER_GAIN_ON_HIT);
+        newState.opponent.specialMeter = Math.min(100, newState.opponent.specialMeter + METER_GAIN_ON_DAMAGE);
+
         newParticles.push(...createHitParticles(hitX, hitY, newState.player.color));
 
         const hitSound = HIT_SOUNDS[Math.floor(Math.random() * HIT_SOUNDS.length)];
@@ -481,7 +704,7 @@ const checkHits = (
         newState.camera.shake = Math.min(20, newState.camera.shake + attack.damage * 0.5);
 
         // Sound event based on attack type
-        soundEvents.push(attack.type === 'kick' ? 'kick' : 'punch');
+        soundEvents.push(attack.type === 'special' ? 'special' : attack.type === 'kick' ? 'kick' : 'punch');
       }
 
       // Clear attack so it doesn't hit again
@@ -519,6 +742,10 @@ const checkHits = (
         newState.player.state = 'hit';
         newState.player.comboCount++;
 
+        // Meter gain: attacker gains meter for landing hit, defender gains for taking damage
+        newState.opponent.specialMeter = Math.min(100, newState.opponent.specialMeter + METER_GAIN_ON_HIT);
+        newState.player.specialMeter = Math.min(100, newState.player.specialMeter + METER_GAIN_ON_DAMAGE);
+
         newParticles.push(...createHitParticles(hitX, hitY, newState.opponent.color));
 
         const hitSound = HIT_SOUNDS[Math.floor(Math.random() * HIT_SOUNDS.length)];
@@ -532,7 +759,7 @@ const checkHits = (
         newState.camera.shake = Math.min(20, newState.camera.shake + attack.damage * 0.5);
 
         // Sound event based on attack type
-        soundEvents.push(attack.type === 'kick' ? 'kick' : 'punch');
+        soundEvents.push(attack.type === 'special' ? 'special' : attack.type === 'kick' ? 'kick' : 'punch');
       }
 
       newState.opponent = {
@@ -630,6 +857,8 @@ const calculateAIInput = (ai: Fighter, player: Fighter): InputState => {
     down: false,
     punch: false,
     kick: false,
+    special: false,
+    block: false,
   };
 
   if (ai.hitStun > 0) return input;
@@ -660,11 +889,13 @@ const calculateAIInput = (ai: Fighter, player: Fighter): InputState => {
   else if (distance < 120 && distance > 70) {
     // Block if player is attacking
     if (isPlayerAttacking && rand < 0.6) {
-      input.down = true;
+      input.block = true;
     }
     // Occasionally attack
-    else if (rand < 0.02 && ai.state !== 'attacking') {
-      if (rand < 0.01) {
+    else if (rand < 0.025 && ai.state !== 'attacking') {
+      if (rand < 0.005 && ai.specialMeter >= SPECIAL_METER_COST) {
+        input.special = true; // Rare special attack (only if has meter)
+      } else if (rand < 0.015) {
         input.punch = true;
       } else {
         input.kick = true;
@@ -695,7 +926,7 @@ const calculateAIInput = (ai: Fighter, player: Fighter): InputState => {
     }
     // Sometimes block
     else if (rand < 0.5) {
-      input.down = true;
+      input.block = true;
     }
   }
   // Medium range - mostly idle, sometimes approach
@@ -719,8 +950,10 @@ const calculateTrainingAIInput = (ai: Fighter, player: Fighter): InputState => {
     right: false,
     up: false,
     down: false,
-    punch: false, // Never attacks in training mode
-    kick: false,  // Never attacks in training mode
+    punch: false,   // Never attacks in training mode
+    kick: false,    // Never attacks in training mode
+    special: false, // Never attacks in training mode
+    block: false,
   };
 
   if (ai.hitStun > 0) return input;
@@ -752,7 +985,7 @@ const calculateTrainingAIInput = (ai: Fighter, player: Fighter): InputState => {
     }
     // Sometimes block to let player practice against blocking
     else if (rand < 0.7) {
-      input.down = true;
+      input.block = true;
     }
   } else {
     // Medium range - random movement

@@ -352,12 +352,43 @@ export const OnlineLobby = ({ onGameStart, onBack }: OnlineLobbyProps) => {
 };
 
 const lobbyStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
   .online-lobby {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: #0a0a15;
     padding: 2rem;
     display: flex;
     flex-direction: column;
+    font-family: 'Press Start 2P', monospace;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .online-lobby::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(255, 102, 170, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .online-lobby::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.3) 2px,
+      rgba(0, 0, 0, 0.3) 4px
+    );
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 100;
   }
 
   .lobby-header {
@@ -365,43 +396,50 @@ const lobbyStyles = `
     align-items: center;
     gap: 2rem;
     margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
   }
 
   .back-button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 700;
+    padding: 0.6rem 1rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
     color: #fff;
-    background: rgba(255,255,255,0.1);
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
+    background: linear-gradient(180deg, #333 0%, #111 100%);
+    border: 3px solid #555;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
   }
 
   .back-button:hover {
-    background: rgba(255,255,255,0.2);
+    background: linear-gradient(180deg, #444 0%, #222 100%);
+    border-color: #777;
   }
 
   .lobby-header h1 {
-    font-size: 2.5rem;
-    color: #fff;
-    text-shadow: 3px 3px 0 #000;
+    font-size: 1.8rem;
+    color: #FF66AA;
+    text-shadow:
+      3px 3px 0 #993366,
+      6px 6px 0 #000;
     flex: 1;
     text-align: center;
+    margin: 0;
   }
 
   .room-code {
-    font-size: 1.2rem;
-    color: rgba(255,255,255,0.7);
+    font-size: 0.7rem;
+    color: #888;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 3px solid #ffcc00;
   }
 
   .room-code span {
-    font-family: monospace;
-    font-size: 1.5rem;
-    color: #FF66AA;
-    font-weight: bold;
+    font-size: 1rem;
+    color: #ffcc00;
     letter-spacing: 0.2em;
+    text-shadow: 0 0 10px #ffcc00;
   }
 
   .lobby-content {
@@ -409,24 +447,26 @@ const lobbyStyles = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding: 2rem;
+    gap: 1.5rem;
+    padding: 1rem;
+    position: relative;
+    z-index: 1;
   }
 
   .menu-phase {
     flex-direction: row;
     justify-content: center;
-    gap: 3rem;
+    gap: 2rem;
+    flex-wrap: wrap;
   }
 
   .lobby-option {
-    width: 300px;
-    padding: 2rem;
-    background: rgba(0,0,0,0.4);
-    border: 4px solid rgba(255,255,255,0.2);
-    border-radius: 20px;
+    width: 320px;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 4px solid #333;
     text-align: center;
-    transition: all 0.3s;
+    transition: all 0.2s;
   }
 
   .lobby-option.create {
@@ -434,106 +474,146 @@ const lobbyStyles = `
   }
 
   .lobby-option.create:hover {
-    background: rgba(255, 102, 170, 0.3);
     border-color: #FF66AA;
+    box-shadow: 0 0 30px rgba(255, 102, 170, 0.4);
+    transform: translateY(-5px);
   }
 
   .lobby-option .option-icon {
-    font-size: 4rem;
+    font-size: 3rem;
     display: block;
     margin-bottom: 1rem;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
   }
 
   .lobby-option h2 {
-    color: #fff;
-    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #FF66AA;
+    margin: 0 0 0.8rem 0;
+    text-shadow: 2px 2px 0 #000;
   }
 
   .lobby-option p {
-    color: rgba(255,255,255,0.7);
+    font-size: 0.5rem;
+    color: #888;
     margin: 0 0 1rem 0;
+    line-height: 1.6;
   }
 
   .lobby-option input {
     width: 100%;
-    padding: 1rem;
-    font-size: 1.5rem;
+    padding: 0.8rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1rem;
     text-align: center;
-    font-family: monospace;
     letter-spacing: 0.3em;
-    background: rgba(0,0,0,0.5);
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
-    color: #fff;
+    background: #000;
+    border: 3px solid #555;
+    color: #ffcc00;
     margin-bottom: 1rem;
+    text-shadow: 0 0 5px #ffcc00;
   }
 
   .lobby-option input::placeholder {
-    color: rgba(255,255,255,0.3);
+    color: #444;
     letter-spacing: 0.1em;
+    text-shadow: none;
+  }
+
+  .lobby-option input:focus {
+    outline: none;
+    border-color: #ffcc00;
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
   }
 
   .join-button {
     width: 100%;
-    padding: 1rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #fff;
+    padding: 0.8rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    color: #000;
     background: linear-gradient(180deg, #FF66AA 0%, #CC3388 100%);
-    border: none;
-    border-radius: 8px;
+    border: 4px solid #fff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
+    box-shadow: 4px 4px 0 #000;
   }
 
   .join-button:hover {
     transform: translateY(-2px);
+    box-shadow: 6px 6px 0 #000;
+    background: linear-gradient(180deg, #FF88BB 0%, #DD4499 100%);
+  }
+
+  .join-button:active {
+    transform: translateY(2px);
+    box-shadow: 2px 2px 0 #000;
   }
 
   .connecting-phase {
     justify-content: center;
   }
 
+  .connecting-phase p {
+    font-size: 0.8rem;
+    color: #FF66AA;
+    animation: blink 1s step-end infinite;
+  }
+
   .connecting-spinner {
     width: 60px;
     height: 60px;
-    border: 4px solid rgba(255,255,255,0.2);
+    border: 6px solid #333;
     border-top-color: #FF66AA;
-    border-radius: 50%;
+    border-radius: 0;
     animation: spin 1s linear infinite;
+    box-shadow: 0 0 20px rgba(255, 102, 170, 0.3);
   }
 
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
 
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
   .connection-status {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(0,0,0,0.3);
-    border-radius: 20px;
+    gap: 0.8rem;
+    padding: 0.5rem 1.5rem;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 3px solid #333;
   }
 
   .status-indicator {
     width: 12px;
     height: 12px;
-    border-radius: 50%;
     background: #666;
+    box-shadow: inset 0 0 5px #000;
   }
 
   .status-indicator.waiting {
     background: #FFAA00;
+    box-shadow: 0 0 10px #FFAA00;
     animation: pulse 1s infinite;
   }
 
   .status-indicator.connected {
     background: #44BB44;
+    box-shadow: 0 0 10px #44BB44;
   }
 
   .status-indicator.error {
     background: #FF4444;
+    box-shadow: 0 0 10px #FF4444;
+  }
+
+  .status-text {
+    font-size: 0.6rem;
+    color: #fff;
   }
 
   @keyframes pulse {
@@ -544,34 +624,37 @@ const lobbyStyles = `
   .player-cards {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .player-card {
-    width: 200px;
-    padding: 1.5rem;
-    background: rgba(0,0,0,0.3);
-    border: 3px solid rgba(255,255,255,0.1);
-    border-radius: 15px;
+    width: 220px;
+    padding: 1.2rem;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 4px solid #333;
     text-align: center;
+    transition: all 0.2s;
   }
 
   .player-card h3 {
-    color: rgba(255,255,255,0.7);
+    font-size: 0.6rem;
+    color: #ffcc00;
     margin: 0 0 1rem 0;
-    font-size: 0.9rem;
+    text-shadow: 2px 2px 0 #000;
   }
 
   .player-avatar {
     width: 100px;
     height: 100px;
-    border-radius: 50%;
     margin: 0 auto 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 3px solid rgba(0,0,0,0.3);
+    border: 4px solid #555;
+    background: #111;
   }
 
   .player-avatar img {
@@ -581,63 +664,81 @@ const lobbyStyles = `
   }
 
   .player-avatar.waiting {
-    background: rgba(255,255,255,0.1);
-    font-size: 3rem;
-    color: rgba(255,255,255,0.3);
+    background: linear-gradient(180deg, #222 0%, #111 100%);
+    font-size: 2.5rem;
+    color: #333;
   }
 
   .player-name {
+    font-size: 0.8rem;
     color: #fff;
-    font-size: 1.2rem;
-    font-weight: 700;
     margin: 0 0 1rem 0;
+    text-shadow: 2px 2px 0 #000;
   }
 
   .ready-badge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.5);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.5rem;
+    background: linear-gradient(180deg, #333 0%, #111 100%);
+    border: 2px solid #555;
+    color: #666;
   }
 
   .ready-badge.ready {
-    background: rgba(68, 187, 68, 0.3);
-    color: #44BB44;
+    background: linear-gradient(180deg, #44BB44 0%, #228822 100%);
+    border-color: #66DD66;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(68, 187, 68, 0.4);
   }
 
   .vs-divider {
     font-size: 2rem;
-    font-weight: 700;
-    color: #FF66AA;
-    text-shadow: 2px 2px 0 #000;
+    color: #ff4444;
+    text-shadow:
+      3px 3px 0 #880000,
+      6px 6px 0 #000,
+      0 0 30px rgba(255, 68, 68, 0.5);
+    animation: vsGlow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes vsGlow {
+    0%, 100% { text-shadow: 3px 3px 0 #880000, 6px 6px 0 #000, 0 0 30px rgba(255, 68, 68, 0.5); }
+    50% { text-shadow: 3px 3px 0 #880000, 6px 6px 0 #000, 0 0 50px rgba(255, 68, 68, 0.8); }
+  }
+
+  .character-select-mini,
+  .map-select-mini,
+  .map-display {
+    background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 4px solid #333;
+    padding: 1rem 1.5rem;
   }
 
   .character-select-mini h3,
   .map-select-mini h3,
   .map-display h3 {
-    color: rgba(255,255,255,0.7);
+    font-size: 0.7rem;
+    color: #ffcc00;
     margin: 0 0 1rem 0;
     text-align: center;
+    text-shadow: 2px 2px 0 #000;
   }
 
   .character-grid-mini {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
     justify-content: center;
   }
 
   .char-btn {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.2);
-    background: rgba(0,0,0,0.3);
+    width: 60px;
+    height: 60px;
+    border: 3px solid #555;
+    background: #111;
     cursor: pointer;
     overflow: hidden;
-    transition: all 0.2s;
+    transition: all 0.1s;
     padding: 0;
   }
 
@@ -653,29 +754,31 @@ const lobbyStyles = `
   }
 
   .char-btn:hover:not(:disabled) {
-    border-color: rgba(255,255,255,0.5);
+    border-color: #888;
     transform: scale(1.1);
   }
 
   .char-btn.selected {
-    border-color: #FF66AA;
-    box-shadow: 0 0 10px rgba(255, 102, 170, 0.5);
+    border-color: #ffcc00;
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
   }
 
   .map-grid-mini {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .map-btn {
     padding: 0.5rem 1rem;
-    background: rgba(0,0,0,0.3);
-    border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    background: linear-gradient(180deg, #333 0%, #111 100%);
+    border: 3px solid #555;
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
   }
 
   .map-btn:disabled {
@@ -684,12 +787,15 @@ const lobbyStyles = `
   }
 
   .map-btn:hover:not(:disabled) {
-    border-color: rgba(255,255,255,0.5);
+    border-color: #888;
+    transform: translateY(-2px);
   }
 
   .map-btn.selected {
-    border-color: #FF66AA;
-    background: rgba(255, 102, 170, 0.2);
+    border-color: #ffcc00;
+    background: linear-gradient(180deg, #444 0%, #222 100%);
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+    color: #ffcc00;
   }
 
   .lobby-actions {
@@ -697,53 +803,154 @@ const lobbyStyles = `
     flex-direction: column;
     align-items: center;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   }
 
   .action-button {
-    padding: 1rem 3rem;
-    font-size: 1.3rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 50px;
+    padding: 1rem 2.5rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.9rem;
+    border: 4px solid #fff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
+    box-shadow: 6px 6px 0 #000;
   }
 
   .ready-button {
-    background: linear-gradient(180deg, #44BB44 0%, #339933 100%);
-    color: #fff;
-    box-shadow: 0 4px 0 #226622;
+    background: linear-gradient(180deg, #44BB44 0%, #228822 100%);
+    color: #000;
   }
 
   .ready-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 #226622;
+    transform: translateY(-3px);
+    box-shadow: 9px 9px 0 #000;
+    background: linear-gradient(180deg, #66DD66 0%, #44BB44 100%);
+  }
+
+  .ready-button:active {
+    transform: translateY(2px);
+    box-shadow: 2px 2px 0 #000;
   }
 
   .start-button {
-    background: linear-gradient(180deg, #FF66AA 0%, #CC3388 100%);
+    background: linear-gradient(180deg, #ff6666 0%, #cc0000 100%);
     color: #fff;
-    box-shadow: 0 4px 0 #993366;
-    animation: glow 1s ease-in-out infinite;
+    animation: startGlow 1s ease-in-out infinite;
   }
 
-  @keyframes glow {
-    0%, 100% { box-shadow: 0 4px 0 #993366, 0 0 20px rgba(255, 102, 170, 0.3); }
-    50% { box-shadow: 0 4px 0 #993366, 0 0 30px rgba(255, 102, 170, 0.6); }
+  .start-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 9px 9px 0 #000;
+    background: linear-gradient(180deg, #ff8888 0%, #ee2222 100%);
+  }
+
+  @keyframes startGlow {
+    0%, 100% { box-shadow: 6px 6px 0 #000, 0 0 20px rgba(255, 68, 68, 0.3); }
+    50% { box-shadow: 6px 6px 0 #000, 0 0 40px rgba(255, 68, 68, 0.6); }
   }
 
   .waiting-text {
-    color: rgba(255,255,255,0.5);
-    font-style: italic;
+    font-size: 0.6rem;
+    color: #888;
+    animation: blink 1s step-end infinite;
   }
 
   .error-message {
-    padding: 1rem 2rem;
-    background: rgba(255, 68, 68, 0.2);
-    border: 2px solid #FF4444;
-    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.6rem;
+    background: linear-gradient(180deg, #440000 0%, #220000 100%);
+    border: 3px solid #FF4444;
     color: #FF4444;
     margin-top: 1rem;
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+  }
+
+  /* Responsive styles */
+  @media (max-width: 700px) {
+    .menu-phase {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .lobby-option {
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .lobby-header {
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .lobby-header h1 {
+      font-size: 1.2rem;
+    }
+
+    .back-button {
+      align-self: flex-start;
+    }
+
+    .player-cards {
+      gap: 1rem;
+    }
+
+    .player-card {
+      width: 160px;
+      padding: 1rem;
+    }
+
+    .player-avatar {
+      width: 80px;
+      height: 80px;
+    }
+
+    .player-name {
+      font-size: 0.6rem;
+    }
+
+    .vs-divider {
+      font-size: 1.5rem;
+    }
+
+    .char-btn {
+      width: 50px;
+      height: 50px;
+    }
+
+    .action-button {
+      padding: 0.8rem 2rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (max-width: 450px) {
+    .online-lobby {
+      padding: 1rem;
+    }
+
+    .player-card {
+      width: 140px;
+      padding: 0.8rem;
+    }
+
+    .player-avatar {
+      width: 60px;
+      height: 60px;
+    }
+
+    .ready-badge {
+      font-size: 0.4rem;
+      padding: 0.3rem 0.5rem;
+    }
+
+    .char-btn {
+      width: 45px;
+      height: 45px;
+    }
+
+    .map-btn {
+      font-size: 0.4rem;
+      padding: 0.4rem 0.6rem;
+    }
   }
 `;

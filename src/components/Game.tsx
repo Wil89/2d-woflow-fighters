@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { GameState, CharacterData, MapData, Fighter, Particle, TextPopup, SoundEvent, GameMode } from '../types/game';
+import type { GameState, CharacterData, MapData, Fighter, Particle, Projectile, TextPopup, SoundEvent, GameMode } from '../types/game';
 import type { InputState } from '../engine/GameEngine';
 import { createInitialGameState, updateGameState } from '../engine/GameEngine';
 import { characters } from '../data/gameData';
@@ -7,6 +7,7 @@ import {
   initAudio,
   playPunchSound,
   playKickSound,
+  playSpecialSound,
   playBlockSound,
   playWhiffSound,
   playKOSound,
@@ -39,13 +40,34 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     down: false,
     punch: false,
     kick: false,
+    special: false,
+    block: false,
   });
   const lastPunchRef = useRef(false);
   const lastKickRef = useRef(false);
-  const [gamePhase, setGamePhase] = useState<'intro' | 'fighting' | 'ko' | 'victory'>('intro');
+  const lastSpecialRef = useRef(false);
+  const [gamePhase, setGamePhase] = useState<'intro' | 'fighting' | 'ko' | 'roundEnd' | 'victory'>('intro');
   const introCountRef = useRef(3);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const faceImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Best of 3 rounds
+  const [currentRound, setCurrentRound] = useState(1);
+  const [playerWins, setPlayerWins] = useState(0);
+  const [opponentWins, setOpponentWins] = useState(0);
+  const playerWinsRef = useRef(0);
+  const opponentWinsRef = useRef(0);
+  const roundWinnerRef = useRef<'player' | 'opponent' | null>(null);
+  const matchOverRef = useRef(false);
+
+  // Keep refs in sync with state for use in effects
+  useEffect(() => {
+    playerWinsRef.current = playerWins;
+  }, [playerWins]);
+
+  useEffect(() => {
+    opponentWinsRef.current = opponentWins;
+  }, [opponentWins]);
 
   // Online multiplayer state
   const frameCountRef = useRef(0);
@@ -56,9 +78,12 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     down: false,
     punch: false,
     kick: false,
+    special: false,
+    block: false,
   });
   const lastRemotePunchRef = useRef(false);
   const lastRemoteKickRef = useRef(false);
+  const lastRemoteSpecialRef = useRef(false);
 
   // Store the opponent for consistent reference
   const opponentRef = useRef<CharacterData | null>(null);
@@ -169,6 +194,9 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       case 'kick':
         playKickSound();
         break;
+      case 'special':
+        playSpecialSound();
+        break;
       case 'block':
         playBlockSound();
         break;
@@ -196,6 +224,8 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       if (key === 's') inputRef.current.down = true;
       if (key === 'f') inputRef.current.punch = true;
       if (key === 'g') inputRef.current.kick = true;
+      if (key === 'h') inputRef.current.special = true;
+      if (key === 'shift') inputRef.current.block = true;
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -206,6 +236,8 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       if (key === 's') inputRef.current.down = false;
       if (key === 'f') inputRef.current.punch = false;
       if (key === 'g') inputRef.current.kick = false;
+      if (key === 'h') inputRef.current.special = false;
+      if (key === 'shift') inputRef.current.block = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -233,14 +265,16 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
         return;
       }
 
-      // Create input for this frame (only trigger punch/kick once per press)
+      // Create input for this frame (only trigger punch/kick/special once per press)
       let input: InputState = {
         ...inputRef.current,
         punch: inputRef.current.punch && !lastPunchRef.current,
         kick: inputRef.current.kick && !lastKickRef.current,
+        special: inputRef.current.special && !lastSpecialRef.current,
       };
       lastPunchRef.current = inputRef.current.punch;
       lastKickRef.current = inputRef.current.kick;
+      lastSpecialRef.current = inputRef.current.special;
 
       // Online multiplayer with authoritative host
       if (gameMode === 'online') {
@@ -255,9 +289,11 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
             ...remoteInputRef.current,
             punch: remoteInputRef.current.punch && !lastRemotePunchRef.current,
             kick: remoteInputRef.current.kick && !lastRemoteKickRef.current,
+            special: remoteInputRef.current.special && !lastRemoteSpecialRef.current,
           };
           lastRemotePunchRef.current = remoteInputRef.current.punch;
           lastRemoteKickRef.current = remoteInputRef.current.kick;
+          lastRemoteSpecialRef.current = remoteInputRef.current.special;
 
           const opponent = opponentRef.current;
           const updateResult = updateGameState(
@@ -267,7 +303,9 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
             opponent?.attacks || playerCharacter.attacks,
             1 / 60,
             gameMode,
-            remoteInput  // Guest's input controls opponent (right)
+            remoteInput,  // Guest's input controls opponent (right)
+            playerCharacter.projectileText,
+            opponent?.projectileText || 'SPECIAL'
           );
           gameStateRef.current = updateResult.state;
 
@@ -292,7 +330,10 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
           playerCharacter.attacks,
           opponent?.attacks || playerCharacter.attacks,
           1 / 60,
-          gameMode
+          gameMode,
+          undefined,  // No remote input for offline modes
+          playerCharacter.projectileText,
+          opponent?.projectileText || 'SPECIAL'
         );
         gameStateRef.current = updateResult.state;
 
@@ -317,7 +358,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   }, [playerCharacter, gamePhase, playSoundEvent, gameMode, isHost]);
 
   const render = (ctx: CanvasRenderingContext2D, state: GameState) => {
-    const { camera, player, opponent, particles, textPopups } = state;
+    const { camera, player, opponent, particles, projectiles, textPopups } = state;
 
     ctx.save();
 
@@ -356,6 +397,9 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     drawFighter(ctx, player, true);
     drawFighter(ctx, opponent, false);
 
+    // Draw projectiles
+    projectiles.forEach(p => drawProjectile(ctx, p));
+
     // Draw particles
     particles.forEach(p => drawParticle(ctx, p));
 
@@ -374,9 +418,109 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       drawFightText(ctx);
     }
 
-    if (state.gamePhase === 'victory') {
+    // Draw round end overlay (not match end)
+    if (gamePhase === 'roundEnd') {
+      drawRoundEndOverlay(ctx);
+    }
+
+    // Only show final victory when match is over (2 wins)
+    if (state.gamePhase === 'victory' && matchOverRef.current) {
       drawVictoryOverlay(ctx, state.winner === 'player' ? player : opponent);
     }
+
+    // Draw round indicators
+    drawRoundIndicators(ctx);
+  };
+
+  const drawRoundIndicators = (ctx: CanvasRenderingContext2D) => {
+    const indicatorY = 75;
+    const indicatorSize = 8;
+    const spacing = 18;
+
+    // Player round wins (left side, under health bar)
+    for (let i = 0; i < 2; i++) {
+      const x = 30 + i * spacing;
+      ctx.beginPath();
+      ctx.arc(x, indicatorY, indicatorSize, 0, Math.PI * 2);
+      if (i < playerWins) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.fill();
+        ctx.strokeStyle = '#aa8800';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#333';
+        ctx.fill();
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // Opponent round wins (right side, under health bar)
+    for (let i = 0; i < 2; i++) {
+      const x = CANVAS_WIDTH - 30 - i * spacing;
+      ctx.beginPath();
+      ctx.arc(x, indicatorY, indicatorSize, 0, Math.PI * 2);
+      if (i < opponentWins) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.fill();
+        ctx.strokeStyle = '#aa8800';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#333';
+        ctx.fill();
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // Round number at top center
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, 25);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, 25);
+  };
+
+  const drawRoundEndOverlay = (ctx: CanvasRenderingContext2D) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    const winnerName = roundWinnerRef.current === 'player'
+      ? gameStateRef.current?.player.name || 'PLAYER'
+      : gameStateRef.current?.opponent.name || 'OPPONENT';
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Winner name + WINS ROUND X!
+    const winText = `${winnerName} WINS!`;
+    ctx.font = 'bold 70px Arial';
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 8;
+    ctx.strokeText(winText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+
+    // Fill
+    const gradient = ctx.createLinearGradient(0, CANVAS_HEIGHT / 2 - 80, 0, CANVAS_HEIGHT / 2 + 40);
+    gradient.addColorStop(0, '#ffcc00');
+    gradient.addColorStop(1, '#ff8800');
+    ctx.fillStyle = gradient;
+    ctx.fillText(winText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+
+    // Round info
+    ctx.font = 'bold 36px Arial';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
   };
 
   const drawFighter = (ctx: CanvasRenderingContext2D, fighter: Fighter, _isPlayer: boolean) => {
@@ -634,6 +778,57 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     ctx.restore();
   };
 
+  const drawProjectile = (ctx: CanvasRenderingContext2D, projectile: Projectile) => {
+    const size = 50;
+    const pulseScale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+
+    ctx.save();
+    ctx.translate(projectile.x, projectile.y);
+    ctx.scale(pulseScale, pulseScale);
+
+    // Outer glow
+    const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+    glowGradient.addColorStop(0, projectile.color);
+    glowGradient.addColorStop(0.5, projectile.color + '88');
+    glowGradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner energy ball
+    const innerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.6);
+    innerGradient.addColorStop(0, '#FFFFFF');
+    innerGradient.addColorStop(0.3, projectile.color);
+    innerGradient.addColorStop(1, projectile.color + 'AA');
+    ctx.fillStyle = innerGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Projectile text
+    ctx.font = 'bold 18px "Comic Sans MS", cursive, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(projectile.text, 0, 0);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(projectile.text, 0, 0);
+
+    // Trail particles
+    for (let i = 1; i <= 3; i++) {
+      const trailX = -projectile.vx * i * 3;
+      ctx.globalAlpha = 0.3 / i;
+      ctx.fillStyle = projectile.color;
+      ctx.beginPath();
+      ctx.arc(trailX, 0, size * 0.4 / i, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  };
+
   const drawTextPopup = (ctx: CanvasRenderingContext2D, popup: TextPopup) => {
     const alpha = Math.min(1, popup.life / (popup.maxLife * 0.3));
     const scale = popup.scale * (1 + (1 - popup.life / popup.maxLife) * 0.3);
@@ -689,12 +884,66 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     // Opponent health bar
     drawHealthBar(ctx, CANVAS_WIDTH - 490, 35, 450, 25, opponent.health, opponent.maxHealth, opponent.color, opponent.name, false);
 
+    // Special meter bars (under health bars)
+    drawMeterBar(ctx, 40, 65, 200, 12, player.specialMeter, player.color, true);
+    drawMeterBar(ctx, CANVAS_WIDTH - 240, 65, 200, 12, opponent.specialMeter, opponent.color, false);
+
     // VS text
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = '#FFD700';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('VS', CANVAS_WIDTH / 2, 47);
+  };
+
+  const drawMeterBar = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    meter: number,
+    _color: string,
+    isLeft: boolean
+  ) => {
+    const meterPercent = Math.max(0, Math.min(100, meter)) / 100;
+
+    // Bar background
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 3);
+    ctx.fill();
+
+    // Meter fill
+    const meterWidth = width * meterPercent;
+    const gradient = ctx.createLinearGradient(x, y, x + width, y);
+    gradient.addColorStop(0, '#00AAFF');
+    gradient.addColorStop(0.5, '#00FFFF');
+    gradient.addColorStop(1, '#00AAFF');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    if (isLeft) {
+      ctx.roundRect(x, y, meterWidth, height, 3);
+    } else {
+      ctx.roundRect(x + width - meterWidth, y, meterWidth, height, 3);
+    }
+    ctx.fill();
+
+    // Ready indicator when meter >= 50
+    if (meter >= 50) {
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 10px Arial';
+      ctx.textAlign = isLeft ? 'left' : 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('READY!', isLeft ? x + width + 8 : x - 8, y + height / 2);
+    }
+
+    // Shine effect
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, isLeft ? meterWidth : width, height / 3, [3, 3, 0, 0]);
+    ctx.fill();
   };
 
   const drawHealthBar = (
@@ -779,27 +1028,37 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    ctx.font = 'bold 200px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+
+    // Show "ROUND X" above the countdown
+    ctx.font = 'bold 50px Arial';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 6;
+    ctx.strokeText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 120);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`ROUND ${currentRound}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 120);
+
+    // Countdown number
+    ctx.font = 'bold 200px Arial';
 
     // Outline
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 15;
-    ctx.strokeText(count.toString(), CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.strokeText(count.toString(), CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30);
 
     // Gradient fill
     const gradient = ctx.createLinearGradient(
       CANVAS_WIDTH / 2 - 100,
-      CANVAS_HEIGHT / 2 - 100,
+      CANVAS_HEIGHT / 2 - 70,
       CANVAS_WIDTH / 2 + 100,
-      CANVAS_HEIGHT / 2 + 100
+      CANVAS_HEIGHT / 2 + 130
     );
     gradient.addColorStop(0, '#FFFF00');
     gradient.addColorStop(0.5, '#FF8800');
     gradient.addColorStop(1, '#FF4400');
     ctx.fillStyle = gradient;
-    ctx.fillText(count.toString(), CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    ctx.fillText(count.toString(), CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30);
   };
 
   const drawFightText = (ctx: CanvasRenderingContext2D) => {
@@ -826,17 +1085,19 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
 
   const drawVictoryOverlay = (ctx: CanvasRenderingContext2D, winner: Fighter) => {
     // Semi-transparent background
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Winner text
-    ctx.font = 'bold 80px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Winner name + WINS! on single line
+    const winText = `${winner.name} WINS!`;
+    ctx.font = 'bold 80px Arial';
+
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 8;
-    ctx.strokeText(`${winner.name} WINS!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 50);
+    ctx.lineWidth = 10;
+    ctx.strokeText(winText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
 
     const gradient = ctx.createLinearGradient(
       CANVAS_WIDTH / 2 - 300,
@@ -848,26 +1109,163 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     gradient.addColorStop(0.5, '#FFD700');
     gradient.addColorStop(1, winner.color);
     ctx.fillStyle = gradient;
-    ctx.fillText(`${winner.name} WINS!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 50);
+    ctx.fillText(winText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
+
+    // "MATCH CHAMPION" subtitle
+    ctx.font = 'bold 40px Arial';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 5;
+    ctx.strokeText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10);
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10);
+
+    // Score
+    ctx.font = 'bold 36px Arial';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${playerWins} - ${opponentWins}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
 
     // Subtitle
-    ctx.font = 'bold 30px Arial';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Press any key to continue', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50);
+    ctx.font = 'bold 24px Arial';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('Press any key to continue', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 130);
   };
 
-  // Handle continue after victory
+  // Track round transition timer and processed rounds
+  const roundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const processedRoundRef = useRef(0);
+
+  // Handle round end - intercept 'victory' from engine for round logic
   useEffect(() => {
     if (gamePhase !== 'victory') return;
+    if (!gameStateRef.current) return;
+
+    // Determine round winner
+    const winner = gameStateRef.current.winner;
+
+    // Guard: don't process if no valid winner or already processed this round
+    if (!winner || processedRoundRef.current >= currentRound) {
+      return;
+    }
+
+    // Mark this round as processed
+    processedRoundRef.current = currentRound;
+    roundWinnerRef.current = winner;
+
+    // Calculate new wins using refs (which have current values, not stale closure values)
+    const currentPlayerWins = playerWinsRef.current;
+    const currentOpponentWins = opponentWinsRef.current;
+    const newPlayerWins = winner === 'player' ? currentPlayerWins + 1 : currentPlayerWins;
+    const newOpponentWins = winner === 'opponent' ? currentOpponentWins + 1 : currentOpponentWins;
+
+    // Update wins based on actual winner
+    if (winner === 'player') {
+      setPlayerWins(newPlayerWins);
+    } else if (winner === 'opponent') {
+      setOpponentWins(newOpponentWins);
+    }
+
+    // Check if match is over (best of 3 = first to 2 wins)
+    if (newPlayerWins >= 2 || newOpponentWins >= 2) {
+      // Match is over - mark it and stay in victory phase
+      matchOverRef.current = true;
+      return;
+    }
+
+    // Round is over but match continues - show round end, then start next round
+    setGamePhase('roundEnd');
+
+    // Clear any existing timer
+    if (roundTimerRef.current) {
+      clearTimeout(roundTimerRef.current);
+    }
+
+    // After 2 seconds, start the next round
+    roundTimerRef.current = setTimeout(() => {
+      startNextRound();
+      roundTimerRef.current = null;
+    }, 2000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gamePhase, currentRound]);
+
+  // Start the next round
+  const startNextRound = () => {
+    if (!gameStateRef.current) return;
+
+    // Reset fighter positions and health
+    gameStateRef.current.player.health = 100;
+    gameStateRef.current.player.position = { x: 300, y: 520 };
+    gameStateRef.current.player.velocity = { x: 0, y: 0 };
+    gameStateRef.current.player.state = 'idle';
+    gameStateRef.current.player.stateFrame = 0;
+    gameStateRef.current.player.hitStun = 0;
+    gameStateRef.current.player.comboCount = 0;
+    gameStateRef.current.player.isGrounded = true;
+    gameStateRef.current.player.facing = 'right';
+    gameStateRef.current.player.specialMeter = 0; // Reset meter
+
+    gameStateRef.current.opponent.health = 100;
+    gameStateRef.current.opponent.position = { x: 900, y: 520 };
+    gameStateRef.current.opponent.velocity = { x: 0, y: 0 };
+    gameStateRef.current.opponent.state = 'idle';
+    gameStateRef.current.opponent.stateFrame = 0;
+    gameStateRef.current.opponent.hitStun = 0;
+    gameStateRef.current.opponent.comboCount = 0;
+    gameStateRef.current.opponent.isGrounded = true;
+    gameStateRef.current.opponent.facing = 'left';
+    gameStateRef.current.opponent.specialMeter = 0; // Reset meter
+
+    // Reset game state
+    gameStateRef.current.particles = [];
+    gameStateRef.current.projectiles = [];
+    gameStateRef.current.textPopups = [];
+    gameStateRef.current.slowMo = 1;
+    gameStateRef.current.winner = null;
+    gameStateRef.current.gamePhase = 'intro';
+
+    // Increment round
+    setCurrentRound(prev => prev + 1);
+    roundWinnerRef.current = null;
+
+    // Start countdown for next round
+    introCountRef.current = 3;
+    setGamePhase('intro');
+    playCountdownSound(false);
+
+    const introInterval = setInterval(() => {
+      introCountRef.current--;
+      if (introCountRef.current <= 0) {
+        clearInterval(introInterval);
+        playCountdownSound(true);
+        setTimeout(() => {
+          if (gameStateRef.current) {
+            gameStateRef.current.gamePhase = 'fighting';
+          }
+          setGamePhase('fighting');
+        }, 800);
+      } else {
+        playCountdownSound(false);
+      }
+    }, 1000);
+  };
+
+  // Handle continue after final victory
+  useEffect(() => {
+    if (gamePhase !== 'victory') return;
+    // Only allow continue when match is truly over
+    if (!matchOverRef.current) return;
 
     const handleContinue = () => {
       onBack();
     };
 
-    window.addEventListener('keydown', handleContinue);
-    window.addEventListener('click', handleContinue);
+    // Add a delay before allowing continue
+    const enableContinue = setTimeout(() => {
+      window.addEventListener('keydown', handleContinue);
+      window.addEventListener('click', handleContinue);
+    }, 1500);
 
     return () => {
+      clearTimeout(enableContinue);
       window.removeEventListener('keydown', handleContinue);
       window.removeEventListener('click', handleContinue);
     };

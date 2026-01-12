@@ -77,6 +77,14 @@ export const MainMenu = ({ onStart }: MainMenuProps) => {
             <span className="key">G</span>
             <span className="action">KICK</span>
           </div>
+          <div className="control-row">
+            <span className="key">H</span>
+            <span className="action">SPECIAL</span>
+          </div>
+          <div className="control-row">
+            <span className="key">SHIFT</span>
+            <span className="action">BLOCK</span>
+          </div>
         </div>
 
         <div className="copyright">

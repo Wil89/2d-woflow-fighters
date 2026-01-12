@@ -46,6 +46,7 @@ export interface Fighter {
   isGrounded: boolean;
   hitStun: number;
   comboCount: number;
+  specialMeter: number; // 0-100, specials cost meter to use
 }
 
 export type FighterState =
@@ -74,6 +75,18 @@ export interface Particle {
   rotationSpeed: number;
 }
 
+export interface Projectile {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  owner: 'player' | 'opponent';
+  damage: number;
+  text: string;
+  color: string;
+  life: number;
+}
+
 export interface TextPopup {
   id: string;
   text: string;
@@ -98,6 +111,7 @@ export interface GameState {
   player: Fighter;
   opponent: Fighter;
   particles: Particle[];
+  projectiles: Projectile[];
   textPopups: TextPopup[];
   camera: CameraState;
   gamePhase: 'intro' | 'fighting' | 'ko' | 'victory';
@@ -117,9 +131,11 @@ export interface CharacterData {
   country: string;
   countryFlag: string;
   jobTitle: string;
+  projectileText: string; // Text shown on special move projectile
   attacks: {
     punch: Attack;
     kick: Attack;
+    special: Attack;
   };
   stats: {
     power: number;
@@ -140,4 +156,4 @@ export type GameScreen = 'menu' | 'modeSelect' | 'characterSelect' | 'mapSelect'
 
 export type GameMode = 'training' | 'vs-cpu' | 'online';
 
-export type SoundEvent = 'punch' | 'kick' | 'block' | 'whiff' | 'ko' | 'victory';
+export type SoundEvent = 'punch' | 'kick' | 'special' | 'block' | 'whiff' | 'ko' | 'victory';

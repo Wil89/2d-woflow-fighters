@@ -241,6 +241,76 @@ export const playVictorySound = () => {
   });
 };
 
+// Special move sound - powerful energy blast
+export const playSpecialSound = () => {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  // Initial power-up whoosh
+  const noiseGain = ctx.createGain();
+  const noiseFilter = ctx.createBiquadFilter();
+  const bufferSize = ctx.sampleRate * 0.3;
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = Math.random() * 2 - 1;
+  }
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer;
+
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.setValueAtTime(200, now);
+  noiseFilter.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+  noiseFilter.frequency.exponentialRampToValueAtTime(500, now + 0.3);
+  noiseFilter.Q.setValueAtTime(2, now);
+
+  noiseGain.gain.setValueAtTime(0.5, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+
+  noise.start(now);
+  noise.stop(now + 0.3);
+
+  // Deep bass impact
+  const osc = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(120, now);
+  osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+
+  gainNode.gain.setValueAtTime(0.7, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+  osc.connect(gainNode);
+  gainNode.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.35);
+
+  // High-pitched energy sound
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+
+  osc2.type = 'sawtooth';
+  osc2.frequency.setValueAtTime(600, now);
+  osc2.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+
+  gain2.gain.setValueAtTime(0.3, now);
+  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+
+  osc2.start(now);
+  osc2.stop(now + 0.25);
+};
+
 // Countdown beep
 export const playCountdownSound = (isFinal: boolean = false) => {
   const ctx = getAudioContext();
