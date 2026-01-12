@@ -43,7 +43,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   const lastPunchRef = useRef(false);
   const lastKickRef = useRef(false);
   const [gamePhase, setGamePhase] = useState<'intro' | 'fighting' | 'ko' | 'victory'>('intro');
-  const [introCount, setIntroCount] = useState(3);
+  const introCountRef = useRef(3);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const faceImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
@@ -60,21 +60,15 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   const lastRemotePunchRef = useRef(false);
   const lastRemoteKickRef = useRef(false);
 
-  // Get opponent - use provided opponent for online, random for others
-  const getOpponent = useCallback((): CharacterData => {
-    if (opponentCharacter) {
-      return opponentCharacter;
-    }
-    const others = characters.filter(c => c.id !== playerCharacter.id);
-    return others[Math.floor(Math.random() * others.length)];
-  }, [playerCharacter.id, opponentCharacter]);
-
   // Store the opponent for consistent reference
   const opponentRef = useRef<CharacterData | null>(null);
 
   // Initialize game
   useEffect(() => {
-    const opponent = getOpponent();
+    const opponent = opponentCharacter || (() => {
+      const others = characters.filter(c => c.id !== playerCharacter.id);
+      return others[Math.floor(Math.random() * others.length)];
+    })();
     opponentRef.current = opponent;
 
     // For online mode, both players need the SAME game state perspective
@@ -107,30 +101,36 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     loadFaceImage(opponent);
 
     // Intro countdown
-    let count = 3;
-    setIntroCount(3);
+    introCountRef.current = 3;
+    setGamePhase('intro');
     // Play initial countdown sound
     initAudio();
     playCountdownSound(false);
     const introInterval = setInterval(() => {
-      count--;
-      setIntroCount(count);
-      if (count <= 0) {
+      introCountRef.current--;
+      if (introCountRef.current <= 0) {
         clearInterval(introInterval);
-        if (gameStateRef.current) {
-          gameStateRef.current.gamePhase = 'fighting';
-        }
-        setGamePhase('fighting');
         // Play "FIGHT!" sound
         playCountdownSound(true);
+        // Show "FIGHT!" text for 800ms before starting
+        setTimeout(() => {
+          if (gameStateRef.current) {
+            gameStateRef.current.gamePhase = 'fighting';
+          }
+          setGamePhase('fighting');
+        }, 800);
       } else {
         // Play countdown beep
         playCountdownSound(false);
       }
     }, 1000);
 
-    return () => clearInterval(introInterval);
-  }, [playerCharacter, map, getOpponent, gameMode, isHost]);
+    return () => {
+      clearInterval(introInterval);
+    };
+    // These props are stable on mount and shouldn't change during gameplay
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerCharacter.id, map.id, gameMode, isHost]);
 
   // Setup multiplayer input callbacks for online mode
   useEffect(() => {
@@ -368,9 +368,9 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     drawUI(ctx, state);
 
     // Draw intro/ko overlay
-    if (state.gamePhase === 'intro' && introCount > 0) {
-      drawIntroOverlay(ctx, introCount);
-    } else if (state.gamePhase === 'intro' && introCount === 0) {
+    if (state.gamePhase === 'intro' && introCountRef.current > 0) {
+      drawIntroOverlay(ctx, introCountRef.current);
+    } else if (state.gamePhase === 'intro' && introCountRef.current === 0) {
       drawFightText(ctx);
     }
 

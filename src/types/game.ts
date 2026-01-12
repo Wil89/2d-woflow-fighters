@@ -114,6 +114,9 @@ export interface CharacterData {
   faceImage: string;
   description: string;
   specialty: string;
+  country: string;
+  countryFlag: string;
+  jobTitle: string;
   attacks: {
     punch: Attack;
     kick: Attack;

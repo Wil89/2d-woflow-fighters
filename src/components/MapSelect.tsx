@@ -13,16 +13,20 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
 
   return (
     <div className="map-select">
+      {/* Background */}
+      <div className="select-background">
+        <div className="bg-pattern" />
+        <div className="scanlines" />
+      </div>
+
       <div className="select-header">
         <button className="back-button" onClick={onBack}>← BACK</button>
-        <h1>SELECT ARENA</h1>
+        <div className="title-container">
+          <h1>SELECT ARENA</h1>
+          <div className="title-underline" />
+        </div>
         <div className="selected-fighter">
-          <div
-            className="fighter-badge"
-            style={{
-              background: `linear-gradient(135deg, ${selectedCharacter.color}, ${selectedCharacter.secondaryColor})`,
-            }}
-          />
+          <img src={selectedCharacter.faceImage} alt={selectedCharacter.name} className="fighter-avatar" />
           <span>{selectedCharacter.name}</span>
         </div>
       </div>
@@ -35,11 +39,14 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
             onClick={() => setSelectedIndex(index)}
             onDoubleClick={() => onSelect(map)}
           >
-            <div
-              className="map-preview"
-              style={{ backgroundImage: `url(${map.image})` }}
-            >
-              <div className="map-overlay" />
+            <div className="card-frame">
+              <div
+                className="map-preview"
+                style={{ backgroundImage: `url(${map.image})` }}
+              >
+                <div className="map-overlay" />
+                {selectedIndex === index && <div className="select-indicator">▶</div>}
+              </div>
               <div className="map-info">
                 <h2>{map.name}</h2>
                 <p>{map.ambience}</p>
@@ -53,16 +60,48 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
         className="confirm-button"
         onClick={() => onSelect(maps[selectedIndex])}
       >
-        FIGHT IN {maps[selectedIndex].name.toUpperCase()}
+        <span className="button-text">FIGHT IN {maps[selectedIndex].name.toUpperCase()}!</span>
       </button>
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
         .map-select {
           min-height: 100vh;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          background: #0a0a15;
           padding: 2rem;
           display: flex;
           flex-direction: column;
+          font-family: 'Press Start 2P', monospace;
+          position: relative;
+          overflow-x: hidden;
+          overflow-y: auto;
+        }
+
+        .select-background {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        .bg-pattern {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(ellipse at 50% 50%, rgba(255, 100, 0, 0.1) 0%, transparent 50%);
+        }
+
+        .scanlines {
+          position: absolute;
+          inset: 0;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.3) 2px,
+            rgba(0, 0, 0, 0.3) 4px
+          );
+          opacity: 0.3;
         }
 
         .select-header {
@@ -70,136 +109,263 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
           align-items: center;
           gap: 2rem;
           margin-bottom: 2rem;
+          position: relative;
+          z-index: 1;
         }
 
         .back-button {
-          padding: 0.8rem 1.5rem;
-          font-size: 1rem;
-          font-weight: 700;
+          padding: 0.6rem 1rem;
+          font-family: 'Press Start 2P', monospace;
+          font-size: 0.7rem;
           color: #fff;
-          background: rgba(255,255,255,0.1);
-          border: 2px solid rgba(255,255,255,0.3);
-          border-radius: 8px;
+          background: linear-gradient(180deg, #333 0%, #111 100%);
+          border: 3px solid #555;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.1s;
         }
 
         .back-button:hover {
-          background: rgba(255,255,255,0.2);
+          background: linear-gradient(180deg, #444 0%, #222 100%);
+          border-color: #777;
+        }
+
+        .title-container {
+          flex: 1;
+          text-align: center;
         }
 
         .select-header h1 {
-          font-size: 2.5rem;
-          color: #fff;
-          text-shadow: 3px 3px 0 #000;
-          flex: 1;
-          text-align: center;
+          font-size: 1.8rem;
+          color: #ffcc00;
+          text-shadow:
+            3px 3px 0 #ff6600,
+            6px 6px 0 #000;
+          margin: 0;
+        }
+
+        .title-underline {
+          height: 4px;
+          background: linear-gradient(90deg, transparent, #ffcc00, #ff6600, #ffcc00, transparent);
+          margin-top: 0.5rem;
         }
 
         .selected-fighter {
           display: flex;
           align-items: center;
           gap: 0.8rem;
-          padding: 0.8rem 1.5rem;
-          background: rgba(0,0,0,0.3);
-          border-radius: 30px;
+          padding: 0.5rem 1rem;
+          background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+          border: 3px solid #ffcc00;
           color: #fff;
-          font-weight: 700;
+          font-size: 0.7rem;
         }
 
-        .fighter-badge {
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
+        .fighter-avatar {
+          width: 40px;
+          height: 40px;
+          object-fit: cover;
+          border: 2px solid #333;
         }
 
         .map-grid {
           flex: 1;
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 2rem;
-          max-width: 1000px;
+          gap: 1.5rem;
+          max-width: 900px;
           margin: 0 auto;
           width: 100%;
+          position: relative;
+          z-index: 1;
         }
 
         .map-card {
           border: none;
-          border-radius: 20px;
-          overflow: hidden;
-          cursor: pointer;
-          transition: all 0.3s;
-          padding: 0;
           background: none;
+          padding: 0;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
         .map-card:hover {
-          transform: scale(1.02);
+          transform: translateY(-5px);
         }
 
-        .map-card.selected {
-          box-shadow: 0 0 0 4px #ffdd00, 0 10px 40px rgba(255,221,0,0.3);
+        .card-frame {
+          background: #111;
+          border: 4px solid #333;
+          transition: all 0.2s;
+        }
+
+        .map-card:hover .card-frame {
+          border-color: #888;
+        }
+
+        .map-card.selected .card-frame {
+          border-color: #ffcc00;
+          box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
         }
 
         .map-preview {
           position: relative;
           width: 100%;
-          height: 250px;
+          height: 180px;
           background-size: cover;
           background-position: center;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
+          justify-content: center;
         }
 
         .map-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+          background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 30%);
+        }
+
+        .select-indicator {
+          position: absolute;
+          font-size: 2rem;
+          color: #ffcc00;
+          text-shadow: 0 0 20px #ffcc00;
+          animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.2); opacity: 0.8; }
         }
 
         .map-info {
-          position: relative;
-          z-index: 1;
-          padding: 1.5rem;
-          width: 100%;
+          padding: 1rem;
+          background: linear-gradient(180deg, #1a1a2e 0%, #111 100%);
         }
 
         .map-info h2 {
           margin: 0 0 0.5rem 0;
-          font-size: 1.8rem;
+          font-size: 0.9rem;
           color: #fff;
           text-shadow: 2px 2px 0 #000;
         }
 
         .map-info p {
           margin: 0;
-          color: rgba(255,255,255,0.7);
-          font-size: 1rem;
+          color: #888;
+          font-size: 0.5rem;
         }
 
         .confirm-button {
           align-self: center;
-          margin-top: 2rem;
-          padding: 1.2rem 3rem;
-          font-size: 1.5rem;
-          font-weight: 800;
-          color: #fff;
-          background: linear-gradient(180deg, #ff6b6b 0%, #ee4444 100%);
+          margin-top: 1.5rem;
+          padding: 0;
+          background: none;
           border: none;
-          border-radius: 50px;
           cursor: pointer;
-          box-shadow: 0 5px 0 #990000, 0 8px 15px rgba(0,0,0,0.4);
-          transition: all 0.2s;
+          position: relative;
+          z-index: 1;
         }
 
-        .confirm-button:hover {
+        .confirm-button .button-text {
+          display: block;
+          padding: 1rem 2rem;
+          font-family: 'Press Start 2P', monospace;
+          font-size: 0.8rem;
+          color: #000;
+          background: linear-gradient(180deg, #ff6666 0%, #cc0000 50%, #990000 100%);
+          border: 4px solid #fff;
+          box-shadow: 6px 6px 0 #000;
+          transition: all 0.1s;
+        }
+
+        .confirm-button:hover .button-text {
           transform: translateY(-3px);
-          box-shadow: 0 8px 0 #990000, 0 12px 20px rgba(0,0,0,0.5);
+          box-shadow: 9px 9px 0 #000;
+          background: linear-gradient(180deg, #ff8888 0%, #ee2222 50%, #aa0000 100%);
+          color: #fff;
         }
 
-        .confirm-button:active {
+        .confirm-button:active .button-text {
           transform: translateY(2px);
-          box-shadow: 0 2px 0 #990000, 0 4px 8px rgba(0,0,0,0.3);
+          box-shadow: 2px 2px 0 #000;
+        }
+
+        /* CRT effect */
+        .map-select::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%);
+          pointer-events: none;
+          z-index: 100;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 800px) {
+          .map-grid {
+            grid-template-columns: 1fr;
+            max-width: 500px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .map-select {
+            padding: 1rem;
+          }
+
+          .select-header {
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+          }
+
+          .select-header h1 {
+            font-size: 1.2rem;
+          }
+
+          .back-button {
+            align-self: flex-start;
+          }
+
+          .selected-fighter {
+            align-self: center;
+            font-size: 0.6rem;
+          }
+
+          .fighter-avatar {
+            width: 32px;
+            height: 32px;
+          }
+
+          .map-grid {
+            gap: 1rem;
+          }
+
+          .map-preview {
+            height: 140px;
+          }
+
+          .map-info h2 {
+            font-size: 0.7rem;
+          }
+
+          .map-info p {
+            font-size: 0.4rem;
+          }
+
+          .confirm-button .button-text {
+            padding: 0.8rem 1.5rem;
+            font-size: 0.6rem;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .map-preview {
+            height: 120px;
+          }
+
+          .map-info {
+            padding: 0.8rem;
+          }
         }
       `}</style>
     </div>
