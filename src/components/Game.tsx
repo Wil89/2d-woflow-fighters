@@ -88,6 +88,14 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   // Store the opponent for consistent reference
   const opponentRef = useRef<CharacterData | null>(null);
 
+  // Lock body scroll during gameplay
+  useEffect(() => {
+    document.body.classList.add('game-active');
+    return () => {
+      document.body.classList.remove('game-active');
+    };
+  }, []);
+
   // Initialize game
   useEffect(() => {
     const opponent = opponentCharacter || (() => {

@@ -168,19 +168,21 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         .character-select {
           min-height: 100vh;
           background: #0a0a15;
-          padding: 1rem 2rem;
+          padding: 1rem 2rem 2rem;
           display: flex;
           flex-direction: column;
           font-family: 'Press Start 2P', monospace;
           position: relative;
           overflow-x: hidden;
           overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .select-background {
-          position: absolute;
+          position: fixed;
           inset: 0;
           pointer-events: none;
+          z-index: 0;
         }
 
         .bg-pattern {
@@ -344,14 +346,12 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         .character-details {
           display: flex;
           gap: 1.5rem;
-          flex: 1;
           position: relative;
           z-index: 1;
           max-width: 1000px;
           margin: 0 auto;
           width: 100%;
           min-height: 220px;
-          max-height: 320px;
         }
 
         /* Character Card */
@@ -605,7 +605,7 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         /* CRT effect */
         .character-select::after {
           content: '';
-          position: absolute;
+          position: fixed;
           inset: 0;
           background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%);
           pointer-events: none;
@@ -646,7 +646,7 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
 
         @media (max-width: 600px) {
           .character-select {
-            padding: 0.5rem;
+            padding: 0.5rem 0.5rem 3rem;
           }
 
           .select-header {
@@ -719,10 +719,6 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         }
 
         @media (max-height: 700px) {
-          .character-details {
-            max-height: 220px;
-          }
-
           .card-portrait {
             padding: 0.3rem;
           }
