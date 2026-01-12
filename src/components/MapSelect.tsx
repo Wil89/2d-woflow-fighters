@@ -68,20 +68,20 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
 
         .map-select {
           min-height: 100vh;
+          height: auto;
           background: #0a0a15;
-          padding: 2rem;
-          display: flex;
-          flex-direction: column;
+          padding: 2rem 2rem 3rem;
+          display: block;
           font-family: 'Press Start 2P', monospace;
           position: relative;
-          overflow-x: hidden;
-          overflow-y: auto;
+          overflow: visible;
         }
 
         .select-background {
-          position: absolute;
+          position: fixed;
           inset: 0;
           pointer-events: none;
+          z-index: 0;
         }
 
         .bg-pattern {
@@ -292,7 +292,7 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
         /* CRT effect */
         .map-select::after {
           content: '';
-          position: absolute;
+          position: fixed;
           inset: 0;
           background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%);
           pointer-events: none;
@@ -309,7 +309,7 @@ export const MapSelect = ({ selectedCharacter, onSelect, onBack }: MapSelectProp
 
         @media (max-width: 600px) {
           .map-select {
-            padding: 1rem;
+            padding: 1rem 1rem 3rem;
           }
 
           .select-header {

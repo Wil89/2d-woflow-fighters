@@ -167,15 +167,13 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
 
         .character-select {
           min-height: 100vh;
+          height: auto;
           background: #0a0a15;
           padding: 1rem 2rem 2rem;
-          display: flex;
-          flex-direction: column;
+          display: block;
           font-family: 'Press Start 2P', monospace;
           position: relative;
-          overflow-x: hidden;
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
+          overflow: visible;
         }
 
         .select-background {
@@ -345,6 +343,7 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         /* Character Details Panel */
         .character-details {
           display: flex;
+          flex-wrap: wrap;
           gap: 1.5rem;
           position: relative;
           z-index: 1;
@@ -352,6 +351,7 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
           margin: 0 auto;
           width: 100%;
           min-height: 220px;
+          justify-content: center;
         }
 
         /* Character Card */
@@ -569,8 +569,8 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
 
         /* Confirm Button */
         .confirm-button {
-          align-self: center;
-          margin-top: 1rem;
+          display: block;
+          margin: 1rem auto 0;
           padding: 0;
           background: none;
           border: none;
