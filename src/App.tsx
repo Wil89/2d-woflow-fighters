@@ -5,6 +5,7 @@ import { ModeSelect } from './components/ModeSelect';
 import { CharacterSelect } from './components/CharacterSelect';
 import { MapSelect } from './components/MapSelect';
 import { OnlineLobby } from './components/OnlineLobby';
+import { TournamentLobby } from './components/TournamentLobby';
 import { Game } from './components/Game';
 import './App.css';
 
@@ -18,6 +19,11 @@ function App() {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [opponentCharacter, setOpponentCharacter] = useState<CharacterData | null>(null);
 
+  // Tournament state
+  const [tournamentCode, setTournamentCode] = useState<string | null>(null);
+  const [tournamentMatchId, setTournamentMatchId] = useState<string | null>(null);
+  const [tournamentRound, setTournamentRound] = useState<number | null>(null);
+
   const handleStart = () => {
     setScreen('modeSelect');
   };
@@ -26,6 +32,8 @@ function App() {
     setSelectedMode(mode);
     if (mode === 'online') {
       setScreen('onlineLobby');
+    } else if (mode === 'tournament') {
+      setScreen('tournamentLobby');
     } else {
       setScreen('characterSelect');
     }
@@ -49,6 +57,9 @@ function App() {
     setIsHost(false);
     setRoomCode(null);
     setOpponentCharacter(null);
+    setTournamentCode(null);
+    setTournamentMatchId(null);
+    setTournamentRound(null);
   };
 
   const handleBackToModeSelect = () => {
@@ -113,6 +124,24 @@ function App() {
         />
       )}
 
+      {screen === 'tournamentLobby' && (
+        <TournamentLobby
+          onMatchStart={(character, opponent, map, host, roomCode, matchId, roundNumber, tCode) => {
+            setSelectedCharacter(character);
+            setOpponentCharacter(opponent);
+            setSelectedMap(map);
+            setIsHost(host);
+            setRoomCode(roomCode);
+            setTournamentMatchId(matchId);
+            setTournamentRound(roundNumber);
+            setTournamentCode(tCode);
+            setSelectedMode('tournament');
+            setScreen('game');
+          }}
+          onBack={handleLobbyBack}
+        />
+      )}
+
       {screen === 'game' && selectedCharacter && selectedMap && selectedMode && (
         <Game
           playerCharacter={selectedCharacter}
@@ -121,7 +150,14 @@ function App() {
           gameMode={selectedMode}
           isHost={isHost}
           roomCode={roomCode}
-          onBack={handleBackToMenu}
+          tournamentCode={tournamentCode}
+          tournamentMatchId={tournamentMatchId}
+          tournamentRound={tournamentRound}
+          onBack={selectedMode === 'tournament' ? () => {
+            setScreen('tournamentLobby');
+            setTournamentMatchId(null);
+            setRoomCode(null);
+          } : handleBackToMenu}
         />
       )}
     </div>
