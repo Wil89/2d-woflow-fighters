@@ -132,6 +132,7 @@ export interface CharacterData {
   countryFlag: string;
   jobTitle: string;
   projectileText: string; // Text shown on special move projectile
+  victoryQuotes: string[]; // Funny job-related quotes shown on victory
   attacks: {
     punch: Attack;
     kick: Attack;
