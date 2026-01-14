@@ -496,16 +496,28 @@ export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
         }
 
         .stat-block {
-          width: 20px;
-          height: 12px;
+          width: 22px;
+          height: 16px;
           background: #222;
           border: 1px solid #333;
         }
 
         .stat-block.filled.power {
-          background: linear-gradient(180deg, #ff6666 0%, #cc0000 100%);
-          border-color: #ff0000;
-          box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+          background: linear-gradient(180deg, #ffff00 0%, #ff8800 30%, #ff4400 60%, #cc0000 100%);
+          border-color: #ff6600;
+          box-shadow: 0 0 8px rgba(255, 100, 0, 0.8), 0 0 15px rgba(255, 50, 0, 0.5);
+          animation: firePulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes firePulse {
+          0% {
+            box-shadow: 0 0 5px rgba(255, 100, 0, 0.6), 0 0 10px rgba(255, 50, 0, 0.3);
+            filter: brightness(1);
+          }
+          100% {
+            box-shadow: 0 0 10px rgba(255, 100, 0, 1), 0 0 20px rgba(255, 50, 0, 0.6);
+            filter: brightness(1.2);
+          }
         }
 
         .stat-block.filled.speed {

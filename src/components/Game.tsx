@@ -800,50 +800,97 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   };
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, projectile: Projectile) => {
-    const size = 50;
-    const pulseScale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+    const size = 65; // Fire size
+    const time = Date.now() * 0.01;
+    const pulseScale = 1 + Math.sin(time) * 0.15;
+    const flickerScale = 1 + Math.sin(time * 3) * 0.05;
 
     ctx.save();
     ctx.translate(projectile.x, projectile.y);
-    ctx.scale(pulseScale, pulseScale);
+    ctx.scale(pulseScale * flickerScale, pulseScale * flickerScale);
 
-    // Outer glow
-    const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
-    glowGradient.addColorStop(0, projectile.color);
-    glowGradient.addColorStop(0.5, projectile.color + '88');
-    glowGradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = glowGradient;
+    // Outer fire glow (largest, most transparent)
+    const outerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.5);
+    outerGlow.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+    outerGlow.addColorStop(0.3, 'rgba(255, 50, 0, 0.5)');
+    outerGlow.addColorStop(0.6, 'rgba(200, 0, 0, 0.2)');
+    outerGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = outerGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Middle fire layer
+    const midGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+    midGradient.addColorStop(0, '#FFFF00');
+    midGradient.addColorStop(0.2, '#FFCC00');
+    midGradient.addColorStop(0.4, '#FF8800');
+    midGradient.addColorStop(0.7, '#FF4400');
+    midGradient.addColorStop(1, '#CC0000');
+    ctx.fillStyle = midGradient;
     ctx.beginPath();
     ctx.arc(0, 0, size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner energy ball
-    const innerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.6);
+    // Inner hot core (white/yellow center)
+    const innerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.5);
     innerGradient.addColorStop(0, '#FFFFFF');
-    innerGradient.addColorStop(0.3, projectile.color);
-    innerGradient.addColorStop(1, projectile.color + 'AA');
+    innerGradient.addColorStop(0.3, '#FFFFAA');
+    innerGradient.addColorStop(0.6, '#FFFF00');
+    innerGradient.addColorStop(1, '#FFAA00');
     ctx.fillStyle = innerGradient;
     ctx.beginPath();
-    ctx.arc(0, 0, size * 0.6, 0, Math.PI * 2);
+    ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
     ctx.fill();
 
+    // Flame tendrils (random flickering shapes)
+    ctx.globalAlpha = 0.7;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + time * 0.5;
+      const flameLength = size * (0.8 + Math.sin(time * 2 + i) * 0.3);
+      const flameWidth = size * 0.3;
+
+      ctx.save();
+      ctx.rotate(angle);
+
+      const flameGrad = ctx.createLinearGradient(0, 0, flameLength, 0);
+      flameGrad.addColorStop(0, '#FFAA00');
+      flameGrad.addColorStop(0.5, '#FF6600');
+      flameGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = flameGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(size * 0.3, 0);
+      ctx.quadraticCurveTo(flameLength * 0.5, -flameWidth, flameLength, 0);
+      ctx.quadraticCurveTo(flameLength * 0.5, flameWidth, size * 0.3, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+
     // Projectile text
-    ctx.font = 'bold 18px "Comic Sans MS", cursive, sans-serif';
+    ctx.font = 'bold 16px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeText(projectile.text, 0, 0);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(projectile.text, 0, 0);
 
-    // Trail particles
-    for (let i = 1; i <= 3; i++) {
-      const trailX = -projectile.vx * i * 3;
-      ctx.globalAlpha = 0.3 / i;
-      ctx.fillStyle = projectile.color;
+    // Fire trail
+    for (let i = 1; i <= 5; i++) {
+      const trailX = -projectile.vx * i * 4;
+      const trailY = Math.sin(time * 5 + i) * 5;
+      ctx.globalAlpha = 0.5 / i;
+
+      const trailGrad = ctx.createRadialGradient(trailX, trailY, 0, trailX, trailY, size * 0.5 / i);
+      trailGrad.addColorStop(0, '#FFAA00');
+      trailGrad.addColorStop(0.5, '#FF4400');
+      trailGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = trailGrad;
       ctx.beginPath();
-      ctx.arc(trailX, 0, size * 0.4 / i, 0, Math.PI * 2);
+      ctx.arc(trailX, trailY, size * 0.5 / i, 0, Math.PI * 2);
       ctx.fill();
     }
 
