@@ -1345,6 +1345,26 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     };
   }, [gamePhase, onBack]);
 
+  // Send live scores during tournament matches for spectator view
+  useEffect(() => {
+    // Only for tournament mode
+    if (gameMode !== 'tournament') return;
+    // Only host sends updates to avoid duplicates
+    if (!isHost) return;
+    // Need match details
+    if (!tournamentMatchId || !tournamentRound) return;
+    // Only during active game phases
+    if (gamePhase !== 'fighting' && gamePhase !== 'roundEnd' && gamePhase !== 'victory') return;
+
+    // Send current scores
+    tournamentService.updateLiveScore(
+      tournamentMatchId,
+      tournamentRound,
+      { player1: playerWinsRef.current, player2: opponentWinsRef.current },
+      currentRound
+    );
+  }, [gameMode, isHost, tournamentMatchId, tournamentRound, playerWins, opponentWins, currentRound, gamePhase]);
+
   // Report tournament match result when match ends
   useEffect(() => {
     // Only for tournament mode

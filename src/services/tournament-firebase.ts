@@ -416,6 +416,23 @@ class TournamentFirebaseService {
     });
   }
 
+  // Update live scores during a match (for spectator view)
+  async updateLiveScore(
+    matchId: string,
+    roundNumber: number,
+    scores: { player1: number; player2: number },
+    currentGameRound: number
+  ): Promise<void> {
+    if (!this.tournamentCode) return;
+
+    const matchRef = ref(database, `tournaments/${this.tournamentCode}/bracket/round${roundNumber}/${matchId}`);
+    await update(matchRef, {
+      scores,
+      currentGameRound,
+      lastUpdate: Date.now(),
+    });
+  }
+
   // Report match result
   async reportMatchResult(
     matchId: string,
