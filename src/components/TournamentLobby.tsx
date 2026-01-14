@@ -62,10 +62,31 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
       onTournamentUpdate: (t) => {
         setTournament(t);
         if (t && t.meta) {
-          if (t.meta.status === 'in_progress') {
+          // Log tournament completion for debugging
+          if (t.meta.status === 'completed') {
+            console.log('Tournament completed!', {
+              winnerId: t.meta.winnerId,
+              winnerName: t.meta.winnerId ? t.players[t.meta.winnerId]?.name : 'N/A',
+              playersCount: Object.keys(t.players).length
+            });
+          }
+
+          if (t.meta.status === 'in_progress' || t.meta.status === 'completed') {
             setPhase('in_progress');
             const match = tournamentService.getMyCurrentMatch(t);
             setCurrentMatch(match);
+
+            // Restore my character from tournament data (important after returning from a match)
+            const myPlayerId = tournamentService.getPlayerId();
+            const myTournamentPlayer = t.players[myPlayerId];
+            if (myTournamentPlayer?.character) {
+              console.log('Restoring character from tournament data:', {
+                playerId: myPlayerId,
+                playerName: myTournamentPlayer.name,
+                character: myTournamentPlayer.character.name
+              });
+              setMyCharacter(myTournamentPlayer.character);
+            }
 
             // Reset waiting state if this is a new match
             if (match && match.matchId !== lastMatchIdRef.current) {
@@ -80,7 +101,17 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
         }
       },
       onMatchReady: (match, opponent) => {
-        console.log('Match ready callback:', match.matchId, match.status, match.roomCode);
+        console.log('Match ready callback:', {
+          matchId: match.matchId,
+          roundNumber: match.roundNumber,
+          status: match.status,
+          roomCode: match.roomCode,
+          player1Id: match.player1Id,
+          player2Id: match.player2Id,
+          opponentId: opponent.id,
+          opponentName: opponent.name,
+          opponentCharacter: opponent.character?.name || 'NO CHARACTER'
+        });
         setCurrentMatch(match);
         setMatchOpponent(opponent);
       },
@@ -88,9 +119,10 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
     });
   }); // No dependencies - always update callbacks with fresh state setters
 
-  // Reconnect if returning from a match - runs once on mount
+  // Reconnect if returning from a match - runs on each mount after Strict Mode reset
   useEffect(() => {
     if (existingCode && !hasReconnectedRef.current) {
+      console.log('TournamentLobby: Reconnecting to tournament', existingCode);
       hasReconnectedRef.current = true;
       tournamentService.reconnect();
     }
@@ -107,6 +139,9 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
       } else {
         console.log('TournamentLobby: NOT disconnecting (starting match)');
       }
+      // Reset reconnect flag so next mount will properly reconnect
+      // This is needed because React Strict Mode reuses refs across double-mount
+      hasReconnectedRef.current = false;
     };
   }, []);
 
@@ -144,6 +179,19 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
     const isHost = tournamentService.isMatchHost(currentMatch);
     const map = maps[0];
     const roomCode = currentMatch.roomCode;
+
+    console.log('Auto-starting match:', {
+      matchId: currentMatch.matchId,
+      roundNumber: currentMatch.roundNumber,
+      isHost,
+      myPlayerId: tournamentService.getPlayerId(),
+      myCharacter: myCharacter.name,
+      opponentId: matchOpponent.id,
+      opponentName: matchOpponent.name,
+      opponentCharacter: opponentChar.name,
+      player1Id: currentMatch.player1Id,
+      player2Id: currentMatch.player2Id
+    });
 
     // Set up WebRTC connection before starting match
     const setupAndStart = async () => {

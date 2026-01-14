@@ -1178,7 +1178,12 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     const newPlayerWins = winner === 'player' ? currentPlayerWins + 1 : currentPlayerWins;
     const newOpponentWins = winner === 'opponent' ? currentOpponentWins + 1 : currentOpponentWins;
 
-    // Update wins based on actual winner
+    // IMPORTANT: Update refs IMMEDIATELY with new values
+    // This fixes the race condition where tournament result reporting runs before state sync effects
+    playerWinsRef.current = newPlayerWins;
+    opponentWinsRef.current = newOpponentWins;
+
+    // Update wins state (async, for UI)
     if (winner === 'player') {
       setPlayerWins(newPlayerWins);
     } else if (winner === 'opponent') {
@@ -1189,6 +1194,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     if (newPlayerWins >= 2 || newOpponentWins >= 2) {
       // Match is over - mark it and stay in victory phase
       matchOverRef.current = true;
+      console.log('Match over! Final scores: playerWins=' + newPlayerWins + ', opponentWins=' + newOpponentWins);
       return;
     }
 
@@ -1320,14 +1326,30 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
         // Determine winner:
         // - Host controls "player" (left side) which is player1
         // - Guest controls "opponent" (right side) which is player2
-        // playerWins >= 2 means player1 wins
-        // opponentWins >= 2 means player2 wins
-        const winnerId = playerWinsRef.current >= 2 ? matchData.player1Id : matchData.player2Id;
+        // playerWins >= 2 means player1 (host) wins
+        // opponentWins >= 2 means player2 (guest) wins
+        const finalPlayerWins = playerWinsRef.current;
+        const finalOpponentWins = opponentWinsRef.current;
+
+        console.log('Tournament result determination:', {
+          isHost,
+          finalPlayerWins,
+          finalOpponentWins,
+          player1Id: matchData.player1Id,
+          player2Id: matchData.player2Id,
+          myPlayerId: tournamentService.getPlayerId(),
+          player1WinsMatch: finalPlayerWins >= 2,
+        });
+
+        const winnerId = finalPlayerWins >= 2 ? matchData.player1Id : matchData.player2Id;
 
         if (!winnerId) {
           console.error('Could not determine winner ID');
           return;
         }
+
+        const winnerRole = winnerId === matchData.player1Id ? 'player1/host' : 'player2/guest';
+        console.log(`Reporting winner: ${winnerId} (${winnerRole}) with scores ${finalPlayerWins}-${finalOpponentWins}`);
 
         // Report the result
         await tournamentService.reportMatchResult(
@@ -1337,7 +1359,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
           { player1: playerWinsRef.current, player2: opponentWinsRef.current }
         );
 
-        console.log('Tournament result reported:', winnerId, playerWinsRef.current, opponentWinsRef.current);
+        console.log('Tournament result reported successfully');
       } catch (error) {
         console.error('Failed to report tournament result:', error);
         // Reset flag to allow retry

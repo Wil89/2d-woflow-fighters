@@ -98,7 +98,24 @@ export const TournamentBracket = ({ tournament, currentPlayerId, highlightMatchI
         <div className="champion-banner">
           <div className="trophy">🏆</div>
           <div className="champion-text">CHAMPION</div>
-          <div className="champion-name">{players[meta.winnerId]?.name || 'Unknown'}</div>
+          <div className="champion-name">
+            {players[meta.winnerId]?.name || (() => {
+              // Fallback: search for winner in finals match
+              const finalsRound = bracket[`round${totalRounds}`];
+              const finalsMatch = finalsRound ? Object.values(finalsRound)[0] : null;
+              if (finalsMatch?.winnerId) {
+                const winner = players[finalsMatch.winnerId];
+                if (winner) return winner.name;
+              }
+              // Debug: log what data we have
+              console.log('Champion display issue:', {
+                winnerId: meta.winnerId,
+                playersKeys: Object.keys(players),
+                hasWinnerInPlayers: !!players[meta.winnerId]
+              });
+              return 'Champion';
+            })()}
+          </div>
         </div>
       )}
 

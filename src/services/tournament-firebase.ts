@@ -45,6 +45,12 @@ class TournamentFirebaseService {
 
   constructor() {
     this.playerId = getOrCreatePlayerId();
+    // Restore tournament code from localStorage if available (handles React Strict Mode)
+    const savedCode = localStorage.getItem('active_tournament_code');
+    if (savedCode) {
+      this.tournamentCode = savedCode;
+      console.log('Restored tournament code from localStorage:', savedCode);
+    }
   }
 
   getPlayerId(): string {
@@ -63,10 +69,20 @@ class TournamentFirebaseService {
     this.callbacks = callbacks;
   }
 
+  // Save tournament code to localStorage for persistence across React Strict Mode remounts
+  private saveTournamentCode(code: string) {
+    this.tournamentCode = code;
+    if (code) {
+      localStorage.setItem('active_tournament_code', code);
+    } else {
+      localStorage.removeItem('active_tournament_code');
+    }
+  }
+
   // Create a new tournament
   async createTournament(name: string, size: 4 | 8 | 16, playerName: string): Promise<string> {
     this.isCreator = true;
-    this.tournamentCode = generateTournamentCode();
+    this.saveTournamentCode(generateTournamentCode());
 
     try {
       this.callbacks?.onStatusChange('connecting');
@@ -120,7 +136,7 @@ class TournamentFirebaseService {
   // Join an existing tournament
   async joinTournament(code: string, playerName: string): Promise<void> {
     this.isCreator = false;
-    this.tournamentCode = code.toUpperCase();
+    this.saveTournamentCode(code.toUpperCase());
 
     try {
       this.callbacks?.onStatusChange('connecting');
@@ -193,7 +209,7 @@ class TournamentFirebaseService {
       await remove(ref(database, `tournaments/${this.tournamentCode}/presence/${this.playerId}`));
 
       this.unsubscribe();
-      this.tournamentCode = '';
+      this.saveTournamentCode(''); // Clear tournament code
       this.isCreator = false;
       this.callbacks?.onStatusChange('disconnected');
     } catch (error) {
@@ -468,8 +484,6 @@ class TournamentFirebaseService {
 
   // Advance winner to next round
   private async advanceWinner(matchId: string, roundNumber: number, winnerId: string): Promise<void> {
-    console.log('advanceWinner:', { matchId, roundNumber, winnerId });
-
     const tournamentRef = ref(database, `tournaments/${this.tournamentCode}`);
     const snapshot = await get(tournamentRef);
 
@@ -477,10 +491,20 @@ class TournamentFirebaseService {
 
     const data = snapshot.val();
     const meta = data.meta as TournamentMeta;
+    const players = data.players || {};
     // 4 players = 2 rounds, 8 players = 3 rounds, 16 players = 4 rounds
     const totalRounds = meta.size === 4 ? 2 : meta.size === 8 ? 3 : 4;
 
-    console.log('advanceWinner: totalRounds =', totalRounds, 'current round =', roundNumber);
+    // Get winner's name for logging
+    const winnerPlayer = players[winnerId];
+    console.log('advanceWinner:', {
+      matchId,
+      roundNumber,
+      winnerId,
+      winnerName: winnerPlayer?.name || 'UNKNOWN',
+      winnerCharacter: winnerPlayer?.character?.name || 'NO CHARACTER',
+      totalRounds
+    });
 
     // Check if this was the finals
     if (roundNumber === totalRounds) {
@@ -644,12 +668,20 @@ class TournamentFirebaseService {
 
   // Reconnect to tournament (used when returning from a match)
   async reconnect(): Promise<void> {
-    if (!this.tournamentCode) return;
+    if (!this.tournamentCode) {
+      console.log('reconnect: No tournament code, skipping');
+      return;
+    }
+
+    console.log('reconnect: Reconnecting to tournament', this.tournamentCode, 'unsubscribers:', this.unsubscribers.length);
 
     // Re-subscribe to tournament updates if not already subscribed
     if (this.unsubscribers.length === 0) {
+      console.log('reconnect: Re-subscribing to tournament updates');
       await this.setupPresence();
       this.subscribeToTournament();
+    } else {
+      console.log('reconnect: Already subscribed, skipping re-subscribe');
     }
 
     // Force a manual fetch and callback to ensure UI updates
@@ -687,11 +719,12 @@ class TournamentFirebaseService {
     }
   }
 
-  // Disconnect and cleanup
+  // Disconnect and cleanup (but preserve tournament code - only leaveTournament clears it)
   disconnect(): void {
-    console.log('tournament-firebase DISCONNECT called', new Error().stack);
+    console.log('tournament-firebase DISCONNECT called (preserving tournament code)');
     this.unsubscribe();
-    this.tournamentCode = '';
+    // DO NOT clear tournament code here - it persists in localStorage
+    // Only leaveTournament() should clear it
     this.isCreator = false;
     this.callbacks?.onStatusChange('disconnected');
   }
