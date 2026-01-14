@@ -132,6 +132,7 @@ export interface CharacterData {
   countryFlag: string;
   jobTitle: string;
   projectileText: string; // Text shown on special move projectile
+  victoryQuotes: string[]; // Funny job-related quotes shown on victory
   attacks: {
     punch: Attack;
     kick: Attack;
@@ -186,6 +187,8 @@ export interface TournamentMatch {
   startedAt: number | null;
   completedAt: number | null;
   scores: { player1: number; player2: number };
+  currentGameRound?: number; // Current round within the match (1, 2, or 3)
+  lastUpdate?: number; // Timestamp of last score update for live tracking
 }
 
 export interface TournamentMeta {

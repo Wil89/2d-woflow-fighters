@@ -616,6 +616,43 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
     );
   }
 
+  // Get all live matches for spectator view
+  const getLiveMatches = () => {
+    if (!tournament) return [];
+    const liveMatches: Array<{
+      match: TournamentMatch;
+      player1Name: string;
+      player2Name: string;
+      player1Character: string | null;
+      player2Character: string | null;
+    }> = [];
+
+    // Search all rounds for in_progress matches
+    const totalRounds = tournament.meta.size === 4 ? 2 : tournament.meta.size === 8 ? 3 : 4;
+    for (let round = 1; round <= totalRounds; round++) {
+      const roundMatches = tournament.bracket[`round${round}`];
+      if (!roundMatches) continue;
+
+      for (const match of Object.values(roundMatches)) {
+        if (match.status === 'in_progress' && match.player1Id && match.player2Id) {
+          const player1 = tournament.players[match.player1Id];
+          const player2 = tournament.players[match.player2Id];
+          liveMatches.push({
+            match,
+            player1Name: player1?.name || 'Unknown',
+            player2Name: player2?.name || 'Unknown',
+            player1Character: player1?.character?.faceImage || null,
+            player2Character: player2?.character?.faceImage || null,
+          });
+        }
+      }
+    }
+
+    return liveMatches;
+  };
+
+  const liveMatches = getLiveMatches();
+
   // In Progress Phase
   if (phase === 'in_progress' && tournament) {
     const isEliminated = myPlayer?.status === 'eliminated';
@@ -718,6 +755,45 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Live Matches Panel - Shows real-time status of ongoing fights */}
+          {liveMatches.length > 0 && (
+            <div className="live-matches-panel">
+              <h3>LIVE MATCHES</h3>
+              <div className="live-matches-grid">
+                {liveMatches.map(({ match, player1Name, player2Name, player1Character, player2Character }) => (
+                  <div key={match.matchId} className="live-match-card">
+                    <div className="live-match-round">Round {match.roundNumber}</div>
+                    <div className="live-match-fighters">
+                      <div className="live-fighter">
+                        {player1Character && (
+                          <img src={player1Character} alt={player1Name} className="live-fighter-face" />
+                        )}
+                        <span className="live-fighter-name">{player1Name}</span>
+                      </div>
+                      <div className="live-match-score">
+                        <span className="score-value">{match.scores?.player1 || 0}</span>
+                        <span className="score-separator">-</span>
+                        <span className="score-value">{match.scores?.player2 || 0}</span>
+                      </div>
+                      <div className="live-fighter">
+                        {player2Character && (
+                          <img src={player2Character} alt={player2Name} className="live-fighter-face" />
+                        )}
+                        <span className="live-fighter-name">{player2Name}</span>
+                      </div>
+                    </div>
+                    <div className="live-match-game-round">
+                      Game {match.currentGameRound || 1} of 3
+                    </div>
+                    <div className="live-indicator">
+                      <span className="live-dot"></span> LIVE
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1548,6 +1624,163 @@ const lobbyStyles = `
     color: #ffcc00;
     text-align: center;
     margin: 0 0 1rem 0;
+  }
+
+  /* Live Matches Panel */
+  .live-matches-panel {
+    width: 100%;
+    max-width: 800px;
+    background: linear-gradient(180deg, #1a0a1a 0%, #0d0a1a 100%);
+    border: 4px solid #ff4444;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .live-matches-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ff4444, transparent);
+    animation: liveScan 2s linear infinite;
+  }
+
+  @keyframes liveScan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .live-matches-panel h3 {
+    font-size: 0.8rem;
+    color: #ff4444;
+    text-align: center;
+    margin: 0 0 1rem 0;
+    text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    animation: liveGlow 1s ease-in-out infinite alternate;
+  }
+
+  @keyframes liveGlow {
+    0% { text-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
+    100% { text-shadow: 0 0 20px rgba(255, 68, 68, 0.8); }
+  }
+
+  .live-matches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .live-match-card {
+    background: linear-gradient(180deg, #222 0%, #111 100%);
+    border: 2px solid #444;
+    border-radius: 6px;
+    padding: 0.6rem;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .live-match-card:hover {
+    border-color: #ff4444;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+  }
+
+  .live-match-round {
+    font-size: 0.35rem;
+    color: #888;
+    text-align: center;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .live-match-fighters {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .live-fighter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    width: 60px;
+  }
+
+  .live-fighter-face {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border: 2px solid #555;
+    border-radius: 4px;
+  }
+
+  .live-fighter-name {
+    font-size: 0.35rem;
+    color: #fff;
+    text-align: center;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .live-match-score {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .score-value {
+    font-size: 1rem;
+    color: #ffcc00;
+    text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .score-separator {
+    font-size: 0.7rem;
+    color: #666;
+  }
+
+  .live-match-game-round {
+    font-size: 0.3rem;
+    color: #888;
+    text-align: center;
+    margin-top: 0.3rem;
+  }
+
+  .live-indicator {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.3rem;
+    color: #ff4444;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: livePulse 1s ease-in-out infinite;
+  }
+
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
   }
 
   /* Responsive */

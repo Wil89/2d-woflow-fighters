@@ -44,6 +44,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'CTO & FOUNDER',
     projectileText: 'RAILS',
+    victoryQuotes: [
+      "Deployed to production... YOUR FACE!",
+      "That's what I call a successful sprint!",
+      "git commit -m 'Destroyed opponent'",
+      "Your defense had more bugs than legacy code!",
+    ],
     attacks: {
       punch: createAttack('Rails Punch', 10, 70, 8, 'punch', 'fast'),
       kick: createAttack('Deploy Kick', 14, 85, 10, 'kick', 'fast'),
@@ -63,6 +69,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇬🇧',
     jobTitle: 'CEO & FOUNDER',
     projectileText: 'IPO',
+    victoryQuotes: [
+      "Deal closed. You're acquired!",
+      "That's called executive decision-making!",
+      "Consider this your performance review!",
+      "I don't just close deals, I close fights!",
+    ],
     attacks: {
       punch: createAttack('Deal Closer', 15, 80, 12, 'punch', 'medium'),
       kick: createAttack('Revenue Kick', 18, 90, 15, 'kick', 'slow'),
@@ -82,6 +94,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇮🇳',
     jobTitle: 'FULLSTACK DEV',
     projectileText: 'API',
+    victoryQuotes: [
+      "You've been debugged!",
+      "Full-stack damage, end-to-end!",
+      "That's what happens when you skip code review!",
+      "Status: 200 OK... for ME!",
+    ],
     attacks: {
       punch: createAttack('Stack Overflow', 11, 75, 9, 'punch', 'fast'),
       kick: createAttack('API Kick', 15, 80, 12, 'kick', 'fast'),
@@ -101,6 +119,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇭🇰',
     jobTitle: 'SR. BACKEND DEV',
     projectileText: 'JOIN',
+    victoryQuotes: [
+      "SELECT * FROM victories WHERE winner = 'Lily'",
+      "Your connection has been terminated!",
+      "That's 99.99% uptime on knockouts!",
+      "Cached that L for you!",
+    ],
     attacks: {
       punch: createAttack('Query Punch', 12, 70, 10, 'punch', 'fast'),
       kick: createAttack('Cache Kick', 14, 85, 11, 'kick', 'fast'),
@@ -120,6 +144,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇨🇳',
     jobTitle: 'SALES & PM',
     projectileText: 'KPI',
+    victoryQuotes: [
+      "That was on the roadmap all along!",
+      "Your defeat is a P0 priority!",
+      "Let's circle back to your loss!",
+      "I'm moving you to the 'Done' column!",
+    ],
     attacks: {
       punch: createAttack('Roadmap Slam', 18, 90, 16, 'punch', 'slow'),
       kick: createAttack('Sprint Stomp', 20, 95, 18, 'kick', 'slow'),
@@ -139,6 +169,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇧🇦',
     jobTitle: 'QA ENGINEER',
     projectileText: 'BUG',
+    victoryQuotes: [
+      "Test case: PASSED. You: FAILED!",
+      "Found a critical bug: YOUR DEFENSE!",
+      "That's going straight to the bug tracker!",
+      "Regression test complete. You regressed!",
+    ],
     attacks: {
       punch: createAttack('Bug Report', 16, 80, 13, 'punch', 'medium'),
       kick: createAttack('Test Fail Kick', 19, 85, 15, 'kick', 'slow'),
@@ -158,6 +194,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'FRONTEND LEAD',
     projectileText: 'FLEX',
+    victoryQuotes: [
+      "display: flex; justify-content: VICTORY!",
+      "That's pixel-perfect destruction!",
+      "Your components have been unmounted!",
+      "npm uninstall opponent --force",
+    ],
     attacks: {
       punch: createAttack('Pixel Punch', 12, 75, 10, 'punch', 'medium'),
       kick: createAttack('Component Kick', 16, 80, 14, 'kick', 'medium'),
@@ -177,6 +219,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'PRODUCT MANAGER',
     projectileText: 'JIRA',
+    victoryQuotes: [
+      "User story: As a winner, I defeated you!",
+      "Sprint completed. You didn't make it!",
+      "That's what I call agile development!",
+      "Moving your ticket to 'Won't Fix'!",
+    ],
     attacks: {
       punch: createAttack('Backlog Bash', 14, 85, 11, 'punch', 'medium'),
       kick: createAttack('Scrum Kick', 17, 90, 13, 'kick', 'medium'),
@@ -196,6 +244,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'DIRECTOR OF OPERATIONS',
     projectileText: 'OPS',
+    victoryQuotes: [
+      "Operations running at 100% efficiency!",
+      "Your defeat has been streamlined!",
+      "That's operational excellence for you!",
+      "Process optimized: YOUR DESTRUCTION!",
+    ],
     attacks: {
       punch: createAttack('Process Punch', 13, 78, 11, 'punch', 'medium'),
       kick: createAttack('Workflow Kick', 16, 85, 13, 'kick', 'medium'),
@@ -215,6 +269,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇨🇺',
     jobTitle: 'FULLSTACK ENGINEER',
     projectileText: 'GIT',
+    victoryQuotes: [
+      "git push --force YOUR FACE!",
+      "Pull request: APPROVED for destruction!",
+      "Deployed your defeat to production!",
+      "Container orchestrated: YOUR LOSS!",
+    ],
     attacks: {
       punch: createAttack('Merge Conflict', 12, 76, 10, 'punch', 'fast'),
       kick: createAttack('Docker Kick', 15, 82, 12, 'kick', 'fast'),
@@ -234,6 +294,12 @@ export const characters: CharacterData[] = [
     countryFlag: '\u{1F1F7}\u{1F1F4}',
     jobTitle: 'HR MANAGER',
     projectileText: 'PIP',
+    victoryQuotes: [
+      "You've been terminated... PERMANENTLY!",
+      "Consider this your exit interview!",
+      "HR has processed your defeat!",
+      "Your performance was... unacceptable!",
+    ],
     attacks: {
       punch: createAttack('Termination Notice', 14, 80, 12, 'punch', 'medium'),
       kick: createAttack('Policy Kick', 17, 88, 14, 'kick', 'medium'),
@@ -253,6 +319,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇮🇳',
     jobTitle: 'AI PRODUCTS & OPS',
     projectileText: 'AI',
+    victoryQuotes: [
+      "My AI predicted this outcome!",
+      "Your defeat was machine-learned!",
+      "Neural network says: YOU LOSE!",
+      "Automated your destruction at scale!",
+    ],
     attacks: {
       punch: createAttack('Neural Punch', 11, 74, 9, 'punch', 'fast'),
       kick: createAttack('Automation Kick', 14, 80, 11, 'kick', 'fast'),
@@ -272,6 +344,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'PRODUCT DESIGN MANAGER',
     projectileText: 'UX',
+    victoryQuotes: [
+      "Your UX? Unacceptable Experience!",
+      "Designed your defeat in Figma!",
+      "That's a beautiful user journey... to DEFEAT!",
+      "Your defense failed usability testing!",
+    ],
     attacks: {
       punch: createAttack('Wireframe Strike', 13, 77, 10, 'punch', 'medium'),
       kick: createAttack('Prototype Kick', 16, 84, 13, 'kick', 'medium'),
@@ -291,6 +369,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'DESIGNER',
     projectileText: 'CSS',
+    victoryQuotes: [
+      "That was aesthetically devastating!",
+      "Your defense? Not on brand!",
+      "I call this piece: YOUR DEFEAT!",
+      "Color palette: black and blue!",
+    ],
     attacks: {
       punch: createAttack('Artboard Punch', 12, 75, 9, 'punch', 'fast'),
       kick: createAttack('Layer Kick', 15, 82, 12, 'kick', 'fast'),
@@ -310,6 +394,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'GTM LEAD',
     projectileText: 'ROI',
+    victoryQuotes: [
+      "Product launched: YOUR DEFEAT!",
+      "That's a 100% conversion rate on knockouts!",
+      "Go-to-market strategy: GO HOME!",
+      "Your ROI? Return On Injuries!",
+    ],
     attacks: {
       punch: createAttack('Launch Punch', 14, 82, 11, 'punch', 'medium'),
       kick: createAttack('Market Kick', 17, 88, 14, 'kick', 'medium'),
@@ -329,6 +419,12 @@ export const characters: CharacterData[] = [
     countryFlag: '🇺🇸',
     jobTitle: 'FRONTEND DEVELOPER',
     projectileText: 'JSX',
+    victoryQuotes: [
+      "Rendered you unconscious at 60fps!",
+      "useState(defeated); // that's you!",
+      "Your defense wasn't responsive enough!",
+      "TypeScript says: YOU'RE ANY TYPE OF LOSER!",
+    ],
     attacks: {
       punch: createAttack('React Punch', 11, 73, 9, 'punch', 'fast'),
       kick: createAttack('TypeScript Kick', 14, 79, 11, 'kick', 'fast'),

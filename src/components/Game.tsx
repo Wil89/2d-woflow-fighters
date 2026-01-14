@@ -65,6 +65,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   const roundWinnerRef = useRef<'player' | 'opponent' | null>(null);
   const matchOverRef = useRef(false);
   const tournamentResultReportedRef = useRef(false);
+  const victoryQuoteRef = useRef<string | null>(null);
 
   // Keep refs in sync with state for use in effects
   useEffect(() => {
@@ -1179,23 +1180,89 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     ctx.fillStyle = gradient;
     ctx.fillText(winText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
 
-    // "MATCH CHAMPION" subtitle
-    ctx.font = 'bold 40px Arial';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 5;
-    ctx.strokeText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10);
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10);
+    // Speech bubble with victory quote
+    if (victoryQuoteRef.current) {
+      const quote = victoryQuoteRef.current;
+      const bubbleX = winner.position.x;
+      const bubbleY = winner.position.y - 220;
+
+      // Measure text for bubble size
+      ctx.font = 'bold 18px Arial';
+      const textWidth = ctx.measureText(quote).width;
+      const bubbleWidth = Math.max(textWidth + 40, 200);
+      const bubbleHeight = 50;
+      const bubbleRadius = 15;
+
+      // Draw speech bubble background
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+
+      // Rounded rectangle for bubble
+      ctx.beginPath();
+      ctx.moveTo(bubbleX - bubbleWidth/2 + bubbleRadius, bubbleY - bubbleHeight/2);
+      ctx.lineTo(bubbleX + bubbleWidth/2 - bubbleRadius, bubbleY - bubbleHeight/2);
+      ctx.quadraticCurveTo(bubbleX + bubbleWidth/2, bubbleY - bubbleHeight/2, bubbleX + bubbleWidth/2, bubbleY - bubbleHeight/2 + bubbleRadius);
+      ctx.lineTo(bubbleX + bubbleWidth/2, bubbleY + bubbleHeight/2 - bubbleRadius);
+      ctx.quadraticCurveTo(bubbleX + bubbleWidth/2, bubbleY + bubbleHeight/2, bubbleX + bubbleWidth/2 - bubbleRadius, bubbleY + bubbleHeight/2);
+      ctx.lineTo(bubbleX - bubbleWidth/2 + bubbleRadius, bubbleY + bubbleHeight/2);
+      ctx.quadraticCurveTo(bubbleX - bubbleWidth/2, bubbleY + bubbleHeight/2, bubbleX - bubbleWidth/2, bubbleY + bubbleHeight/2 - bubbleRadius);
+      ctx.lineTo(bubbleX - bubbleWidth/2, bubbleY - bubbleHeight/2 + bubbleRadius);
+      ctx.quadraticCurveTo(bubbleX - bubbleWidth/2, bubbleY - bubbleHeight/2, bubbleX - bubbleWidth/2 + bubbleRadius, bubbleY - bubbleHeight/2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Draw speech bubble tail (pointing to character)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(bubbleX - 15, bubbleY + bubbleHeight/2);
+      ctx.lineTo(bubbleX, bubbleY + bubbleHeight/2 + 25);
+      ctx.lineTo(bubbleX + 15, bubbleY + bubbleHeight/2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw tail border
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(bubbleX - 15, bubbleY + bubbleHeight/2);
+      ctx.lineTo(bubbleX, bubbleY + bubbleHeight/2 + 25);
+      ctx.lineTo(bubbleX + 15, bubbleY + bubbleHeight/2);
+      ctx.stroke();
+
+      // Cover the line inside the bubble
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bubbleX - 16, bubbleY + bubbleHeight/2 - 3, 32, 6);
+
+      // Draw quote text
+      ctx.font = 'bold 18px Arial';
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'center';
+      ctx.fillText(quote, bubbleX, bubbleY + 2);
+    }
 
     // Score
+    ctx.textAlign = 'center';
     ctx.font = 'bold 36px Arial';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${playerWins} - ${opponentWins}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(`${playerWins} - ${opponentWins}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText(`${playerWins} - ${opponentWins}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+
+    // "MATCH CHAMPION" subtitle
+    ctx.font = 'bold 28px Arial';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
+    ctx.fillStyle = '#88ff88';
+    ctx.fillText('MATCH CHAMPION', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
 
     // Subtitle
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 20px Arial';
     ctx.fillStyle = '#aaa';
-    ctx.fillText('Press any key to continue', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 130);
+    ctx.fillText('Press any key to continue', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 120);
   };
 
   // Track round transition timer and processed rounds
@@ -1242,6 +1309,13 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       // Match is over - mark it and stay in victory phase
       matchOverRef.current = true;
       console.log('Match over! Final scores: playerWins=' + newPlayerWins + ', opponentWins=' + newOpponentWins);
+
+      // Select a random victory quote for the winner
+      const winnerCharacter = newPlayerWins >= 2 ? playerCharacter : opponentRef.current;
+      if (winnerCharacter?.victoryQuotes && winnerCharacter.victoryQuotes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * winnerCharacter.victoryQuotes.length);
+        victoryQuoteRef.current = winnerCharacter.victoryQuotes[randomIndex];
+      }
       return;
     }
 
@@ -1344,6 +1418,26 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       window.removeEventListener('click', handleContinue);
     };
   }, [gamePhase, onBack]);
+
+  // Send live scores during tournament matches for spectator view
+  useEffect(() => {
+    // Only for tournament mode
+    if (gameMode !== 'tournament') return;
+    // Only host sends updates to avoid duplicates
+    if (!isHost) return;
+    // Need match details
+    if (!tournamentMatchId || !tournamentRound) return;
+    // Only during active game phases
+    if (gamePhase !== 'fighting' && gamePhase !== 'roundEnd' && gamePhase !== 'victory') return;
+
+    // Send current scores
+    tournamentService.updateLiveScore(
+      tournamentMatchId,
+      tournamentRound,
+      { player1: playerWinsRef.current, player2: opponentWinsRef.current },
+      currentRound
+    );
+  }, [gameMode, isHost, tournamentMatchId, tournamentRound, playerWins, opponentWins, currentRound, gamePhase]);
 
   // Report tournament match result when match ends
   useEffect(() => {
