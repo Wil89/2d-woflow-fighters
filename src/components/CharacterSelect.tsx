@@ -15,6 +15,8 @@ const countryMaps: Record<string, string> = {
   'Hong Kong': 'https://flagcdn.com/w320/hk.png',
   'China': 'https://flagcdn.com/w320/cn.png',
   'Bosnia': 'https://flagcdn.com/w320/ba.png',
+  'Cuba': 'https://flagcdn.com/w320/cu.png',
+  'Romania': 'https://flagcdn.com/w320/ro.png',
 };
 
 export const CharacterSelect = ({ onSelect, onBack }: CharacterSelectProps) => {
