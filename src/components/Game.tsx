@@ -15,6 +15,7 @@ import {
   playCountdownSound,
 } from '../utils/sounds';
 import { multiplayerService } from '../services/multiplayer-firebase';
+import { tournamentService } from '../services/tournament-firebase';
 
 interface GameProps {
   playerCharacter: CharacterData;
@@ -23,6 +24,10 @@ interface GameProps {
   gameMode: GameMode;
   isHost?: boolean;
   roomCode?: string | null;
+  // Tournament mode props
+  tournamentCode?: string | null;
+  tournamentMatchId?: string | null;
+  tournamentRound?: number | null;
   onBack: () => void;
 }
 
@@ -30,7 +35,7 @@ const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 600;
 const FIGHTER_HEIGHT = 140;
 
-export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost, roomCode, onBack }: GameProps) => {
+export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost, roomCode, tournamentCode: _tournamentCode, tournamentMatchId, tournamentRound, onBack }: GameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState | null>(null);
   const inputRef = useRef<InputState>({
@@ -59,6 +64,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
   const opponentWinsRef = useRef(0);
   const roundWinnerRef = useRef<'player' | 'opponent' | null>(null);
   const matchOverRef = useRef(false);
+  const tournamentResultReportedRef = useRef(false);
 
   // Keep refs in sync with state for use in effects
   useEffect(() => {
@@ -104,9 +110,10 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     })();
     opponentRef.current = opponent;
 
-    // For online mode, both players need the SAME game state perspective
+    // For online/tournament mode, both players need the SAME game state perspective
     // Host's character is always "player" (left side), Guest's character is always "opponent" (right side)
-    if (gameMode === 'online' && !isHost) {
+    const isMultiplayer = gameMode === 'online' || gameMode === 'tournament';
+    if (isMultiplayer && !isHost) {
       // Guest: swap characters so both clients see the same game
       // playerCharacter = guest's char, opponent = host's char
       // We want: player = host's char (opponent), opponent = guest's char (playerCharacter)
@@ -165,9 +172,10 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerCharacter.id, map.id, gameMode, isHost]);
 
-  // Setup multiplayer input callbacks for online mode
+  // Setup multiplayer input callbacks for online/tournament mode
   useEffect(() => {
-    if (gameMode !== 'online') return;
+    const isMultiplayer = gameMode === 'online' || gameMode === 'tournament';
+    if (!isMultiplayer) return;
 
     multiplayerService.setCallbacks({
       onStatusChange: () => {},
@@ -288,8 +296,9 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       lastKickRef.current = inputRef.current.kick;
       lastSpecialRef.current = inputRef.current.special;
 
-      // Online multiplayer with authoritative host
-      if (gameMode === 'online') {
+      // Online/tournament multiplayer with authoritative host
+      const isMultiplayer = gameMode === 'online' || gameMode === 'tournament';
+      if (isMultiplayer) {
         // Always send our input
         frameCountRef.current++;
         multiplayerService.sendInput(frameCountRef.current, inputRef.current);
@@ -1169,7 +1178,12 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     const newPlayerWins = winner === 'player' ? currentPlayerWins + 1 : currentPlayerWins;
     const newOpponentWins = winner === 'opponent' ? currentOpponentWins + 1 : currentOpponentWins;
 
-    // Update wins based on actual winner
+    // IMPORTANT: Update refs IMMEDIATELY with new values
+    // This fixes the race condition where tournament result reporting runs before state sync effects
+    playerWinsRef.current = newPlayerWins;
+    opponentWinsRef.current = newOpponentWins;
+
+    // Update wins state (async, for UI)
     if (winner === 'player') {
       setPlayerWins(newPlayerWins);
     } else if (winner === 'opponent') {
@@ -1180,6 +1194,7 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     if (newPlayerWins >= 2 || newOpponentWins >= 2) {
       // Match is over - mark it and stay in victory phase
       matchOverRef.current = true;
+      console.log('Match over! Final scores: playerWins=' + newPlayerWins + ', opponentWins=' + newOpponentWins);
       return;
     }
 
@@ -1283,6 +1298,78 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
     };
   }, [gamePhase, onBack]);
 
+  // Report tournament match result when match ends
+  useEffect(() => {
+    // Only for tournament mode
+    if (gameMode !== 'tournament') return;
+    // Only when match is over
+    if (gamePhase !== 'victory' || !matchOverRef.current) return;
+    // Only host reports to avoid duplicate submissions
+    if (!isHost) return;
+    // Only report once
+    if (tournamentResultReportedRef.current) return;
+    // Need match details
+    if (!tournamentMatchId || !tournamentRound) return;
+
+    const reportResult = async () => {
+      try {
+        // Mark as reported immediately to prevent double-reporting
+        tournamentResultReportedRef.current = true;
+
+        // Get match data to find player IDs
+        const matchData = await tournamentService.getMatchData(tournamentMatchId, tournamentRound);
+        if (!matchData) {
+          console.error('Could not fetch match data for result reporting');
+          return;
+        }
+
+        // Determine winner:
+        // - Host controls "player" (left side) which is player1
+        // - Guest controls "opponent" (right side) which is player2
+        // playerWins >= 2 means player1 (host) wins
+        // opponentWins >= 2 means player2 (guest) wins
+        const finalPlayerWins = playerWinsRef.current;
+        const finalOpponentWins = opponentWinsRef.current;
+
+        console.log('Tournament result determination:', {
+          isHost,
+          finalPlayerWins,
+          finalOpponentWins,
+          player1Id: matchData.player1Id,
+          player2Id: matchData.player2Id,
+          myPlayerId: tournamentService.getPlayerId(),
+          player1WinsMatch: finalPlayerWins >= 2,
+        });
+
+        const winnerId = finalPlayerWins >= 2 ? matchData.player1Id : matchData.player2Id;
+
+        if (!winnerId) {
+          console.error('Could not determine winner ID');
+          return;
+        }
+
+        const winnerRole = winnerId === matchData.player1Id ? 'player1/host' : 'player2/guest';
+        console.log(`Reporting winner: ${winnerId} (${winnerRole}) with scores ${finalPlayerWins}-${finalOpponentWins}`);
+
+        // Report the result
+        await tournamentService.reportMatchResult(
+          tournamentMatchId,
+          tournamentRound,
+          winnerId,
+          { player1: playerWinsRef.current, player2: opponentWinsRef.current }
+        );
+
+        console.log('Tournament result reported successfully');
+      } catch (error) {
+        console.error('Failed to report tournament result:', error);
+        // Reset flag to allow retry
+        tournamentResultReportedRef.current = false;
+      }
+    };
+
+    reportResult();
+  }, [gamePhase, gameMode, isHost, tournamentMatchId, tournamentRound]);
+
   // Reset health in training mode
   const handleResetHealth = () => {
     if (gameStateRef.current && gameMode === 'training') {
@@ -1306,6 +1393,11 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
       {gameMode === 'online' && (
         <div className="mode-indicator online-indicator">
           ONLINE PvP {roomCode && `• Room: ${roomCode}`}
+        </div>
+      )}
+      {gameMode === 'tournament' && (
+        <div className="mode-indicator tournament-indicator">
+          TOURNAMENT {tournamentRound && `• Round ${tournamentRound}`}
         </div>
       )}
 
@@ -1382,6 +1474,12 @@ export const Game = ({ playerCharacter, opponentCharacter, map, gameMode, isHost
           background: rgba(255, 102, 170, 0.9);
           color: #fff;
           border: 2px solid #993366;
+        }
+
+        .tournament-indicator {
+          background: rgba(255, 204, 0, 0.9);
+          color: #000;
+          border: 2px solid #996600;
         }
 
         .reset-button {

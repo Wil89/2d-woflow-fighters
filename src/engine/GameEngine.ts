@@ -419,8 +419,8 @@ export const updateGameState = (
 
   // Determine opponent input based on game mode
   let opponentInput: InputState;
-  if (gameMode === 'online' && remoteInput) {
-    // Online mode: use remote player's input
+  if ((gameMode === 'online' || gameMode === 'tournament') && remoteInput) {
+    // Online/tournament mode: use remote player's input
     opponentInput = remoteInput;
   } else if (gameMode === 'training') {
     // Training mode: AI moves but doesn't attack

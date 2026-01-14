@@ -66,9 +66,9 @@ export class MultiplayerFirebaseService {
     this.callbacks = callbacks;
   }
 
-  async createRoom(): Promise<string> {
+  async createRoom(existingCode?: string): Promise<string> {
     this.isHost = true;
-    this.roomCode = generateRoomCode();
+    this.roomCode = existingCode || generateRoomCode();
     this.pendingCandidates = [];
     this.remoteDescriptionSet = false;
 
@@ -523,6 +523,39 @@ export class MultiplayerFirebaseService {
 
   isConnected(): boolean {
     return this.dataChannel?.readyState === 'open';
+  }
+
+  // Wait for WebRTC connection to be established
+  waitForConnection(timeoutMs: number = 15000): Promise<boolean> {
+    return new Promise((resolve) => {
+      // Already connected
+      if (this.isConnected()) {
+        console.log('Already connected');
+        resolve(true);
+        return;
+      }
+
+      const startTime = Date.now();
+
+      const checkConnection = () => {
+        if (this.isConnected()) {
+          console.log('WebRTC connection established');
+          resolve(true);
+          return;
+        }
+
+        if (Date.now() - startTime > timeoutMs) {
+          console.error('WebRTC connection timeout');
+          resolve(false);
+          return;
+        }
+
+        // Check again in 100ms
+        setTimeout(checkConnection, 100);
+      };
+
+      checkConnection();
+    });
   }
 
   async disconnect() {

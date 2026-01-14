@@ -152,8 +152,58 @@ export interface MapData {
   ambience: string;
 }
 
-export type GameScreen = 'menu' | 'modeSelect' | 'characterSelect' | 'mapSelect' | 'onlineLobby' | 'game';
+export type GameScreen = 'menu' | 'modeSelect' | 'characterSelect' | 'mapSelect' | 'onlineLobby' | 'tournamentLobby' | 'game';
 
-export type GameMode = 'training' | 'vs-cpu' | 'online';
+export type GameMode = 'training' | 'vs-cpu' | 'online' | 'tournament';
 
 export type SoundEvent = 'punch' | 'kick' | 'special' | 'block' | 'whiff' | 'ko' | 'victory';
+
+// Tournament Types
+export type TournamentStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled';
+export type TournamentPlayerStatus = 'joined' | 'ready' | 'eliminated' | 'champion';
+export type TournamentMatchStatus = 'pending' | 'ready' | 'in_progress' | 'completed' | 'forfeit';
+
+export interface TournamentPlayer {
+  id: string;
+  name: string;
+  seed: number;
+  character: CharacterData | null;
+  status: TournamentPlayerStatus;
+  joinedAt: number;
+}
+
+export interface TournamentMatch {
+  matchId: string;
+  roundNumber: number;
+  matchNumber: number;
+  player1Id: string | null;
+  player2Id: string | null;
+  player1Ready: boolean;
+  player2Ready: boolean;
+  status: TournamentMatchStatus;
+  winnerId: string | null;
+  roomCode: string | null;
+  startedAt: number | null;
+  completedAt: number | null;
+  scores: { player1: number; player2: number };
+}
+
+export interface TournamentMeta {
+  id: string;
+  code: string;
+  name: string;
+  creatorId: string;
+  status: TournamentStatus;
+  size: 4 | 8 | 16;
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  currentRound: number;
+  winnerId: string | null;
+}
+
+export interface Tournament {
+  meta: TournamentMeta;
+  players: Record<string, TournamentPlayer>;
+  bracket: Record<string, Record<string, TournamentMatch>>; // round -> matchId -> match
+}

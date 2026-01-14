@@ -356,28 +356,28 @@ const lobbyStyles = `
 
   .online-lobby {
     min-height: 100vh;
+    height: auto;
     background: #0a0a15;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
+    padding: 2rem 2rem 3rem;
+    display: block;
     font-family: 'Press Start 2P', monospace;
     position: relative;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: visible;
   }
 
   .online-lobby::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     background:
       radial-gradient(ellipse at 50% 50%, rgba(255, 102, 170, 0.1) 0%, transparent 50%);
     pointer-events: none;
+    z-index: 0;
   }
 
   .online-lobby::after {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: repeating-linear-gradient(
       0deg,
@@ -443,12 +443,11 @@ const lobbyStyles = `
   }
 
   .lobby-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1.5rem;
-    padding: 1rem;
+    padding: 1rem 1rem 2rem;
     position: relative;
     z-index: 1;
   }
@@ -925,7 +924,7 @@ const lobbyStyles = `
 
   @media (max-width: 450px) {
     .online-lobby {
-      padding: 1rem;
+      padding: 1rem 1rem 4rem;
     }
 
     .player-card {

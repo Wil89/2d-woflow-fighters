@@ -58,6 +58,18 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
             <div className="mode-badge">2 PLAYERS</div>
           </div>
         </button>
+
+        <button className="mode-card tournament" onClick={() => onSelect('tournament')}>
+          <div className="card-border" />
+          <div className="mode-content">
+            <div className="mode-icon">🏆</div>
+            <div className="mode-info">
+              <h2>TOURNAMENT</h2>
+              <p>Compete in elimination brackets! Fight your way to become champion.</p>
+            </div>
+            <div className="mode-badge">4-16 PLAYERS</div>
+          </div>
+        </button>
       </div>
 
       <div className="footer-hint">
@@ -69,20 +81,20 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
 
         .mode-select {
           min-height: 100vh;
+          height: auto;
           background: #0a0a15;
-          padding: 2rem;
-          display: flex;
-          flex-direction: column;
+          padding: 2rem 2rem 3rem;
+          display: block;
           font-family: 'Press Start 2P', monospace;
           position: relative;
-          overflow-x: hidden;
-          overflow-y: auto;
+          overflow: visible;
         }
 
         .select-background {
-          position: absolute;
+          position: fixed;
           inset: 0;
           pointer-events: none;
+          z-index: 0;
         }
 
         .bg-pattern {
@@ -212,6 +224,11 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
           box-shadow: 0 0 30px rgba(255, 102, 170, 0.5);
         }
 
+        .mode-card.tournament:hover .card-border {
+          border-color: #ffcc00;
+          box-shadow: 0 0 30px rgba(255, 204, 0, 0.5);
+        }
+
         .mode-content {
           display: flex;
           flex-direction: row;
@@ -246,6 +263,7 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
         .mode-card.training h2 { color: #44BB44; }
         .mode-card.vs-cpu h2 { color: #44AAFF; }
         .mode-card.online h2 { color: #FF66AA; }
+        .mode-card.tournament h2 { color: #ffcc00; }
 
         .mode-divider {
           display: none;
@@ -280,6 +298,10 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
           background: linear-gradient(180deg, #ff88bb 0%, #FF66AA 100%);
         }
 
+        .mode-card.tournament .mode-badge {
+          background: linear-gradient(180deg, #ffdd66 0%, #ffcc00 100%);
+        }
+
         .footer-hint {
           text-align: center;
           font-size: 0.8rem;
@@ -297,7 +319,7 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
         /* CRT effect */
         .mode-select::after {
           content: '';
-          position: absolute;
+          position: fixed;
           inset: 0;
           background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%);
           pointer-events: none;
@@ -307,7 +329,7 @@ export const ModeSelect = ({ onSelect, onBack }: ModeSelectProps) => {
         /* Responsive styles */
         @media (max-width: 600px) {
           .mode-select {
-            padding: 1rem;
+            padding: 1rem 1rem 3rem;
           }
 
           .select-header {
