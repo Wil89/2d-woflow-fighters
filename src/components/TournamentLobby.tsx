@@ -521,17 +521,74 @@ export const TournamentLobby = ({ onMatchStart, onBack }: TournamentLobbyProps) 
 
           <div className="character-select-section">
             <h3>SELECT YOUR FIGHTER</h3>
-            <div className="character-grid">
-              {characters.map(char => (
-                <button
-                  key={char.id}
-                  className={`char-btn ${myCharacter.id === char.id ? 'selected' : ''}`}
-                  onClick={() => setMyCharacter(char)}
-                  disabled={myPlayer?.status === 'ready'}
-                >
-                  <img src={char.faceImage} alt={char.name} />
-                </button>
-              ))}
+            <div className="character-select-layout">
+              {/* Character Grid */}
+              <div className="character-grid-panel">
+                <div className="character-grid">
+                  {characters.map(char => (
+                    <button
+                      key={char.id}
+                      className={`char-btn ${myCharacter.id === char.id ? 'selected' : ''}`}
+                      onClick={() => setMyCharacter(char)}
+                      disabled={myPlayer?.status === 'ready'}
+                    >
+                      <img src={char.faceImage} alt={char.name} />
+                      <span className="char-name">{char.name}</span>
+                      {myCharacter.id === char.id && <div className="select-cursor" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Character Preview */}
+              <div className="character-preview-panel">
+                <div className="preview-card" style={{ borderColor: myCharacter.color }}>
+                  <div className="preview-header" style={{ background: `linear-gradient(90deg, ${myCharacter.color}, ${myCharacter.secondaryColor})` }}>
+                    <span className="preview-name">{myCharacter.name}</span>
+                    <span className="preview-title">{myCharacter.jobTitle}</span>
+                  </div>
+                  <div className="preview-portrait">
+                    <img src={myCharacter.faceImage} alt={myCharacter.name} />
+                  </div>
+                  <div className="preview-country">
+                    <span className="country-flag-emoji">{myCharacter.countryFlag}</span>
+                    <span className="country-name">{myCharacter.country}</span>
+                  </div>
+                  <div className="preview-description">
+                    <p>{myCharacter.description}</p>
+                  </div>
+                  <div className="preview-stats">
+                    <div className="stat-row">
+                      <span className="stat-label">PWR</span>
+                      <div className="stat-bar">
+                        {[...Array(10)].map((_, i) => (
+                          <div key={i} className={`stat-block ${i < myCharacter.stats.power ? 'filled power' : ''}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="stat-row">
+                      <span className="stat-label">SPD</span>
+                      <div className="stat-bar">
+                        {[...Array(10)].map((_, i) => (
+                          <div key={i} className={`stat-block ${i < myCharacter.stats.speed ? 'filled speed' : ''}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="stat-row">
+                      <span className="stat-label">DEF</span>
+                      <div className="stat-bar">
+                        {[...Array(10)].map((_, i) => (
+                          <div key={i} className={`stat-block ${i < myCharacter.stats.defense ? 'filled defense' : ''}`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="preview-specialty">
+                    <span className="specialty-label">SPECIALTY:</span>
+                    <span className="specialty-value">{myCharacter.specialty}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1076,34 +1133,51 @@ const lobbyStyles = `
 
   .character-select-section {
     width: 100%;
-    max-width: 600px;
+    max-width: 900px;
     background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
-    border: 3px solid #333;
-    padding: 1rem;
+    border: 4px solid #ffcc00;
+    padding: 1.5rem;
+    box-shadow: 0 0 30px rgba(255, 204, 0, 0.2);
   }
 
   .character-select-section h3 {
-    font-size: 0.6rem;
+    font-size: 0.9rem;
     color: #ffcc00;
     text-align: center;
-    margin: 0 0 1rem 0;
+    margin: 0 0 1.5rem 0;
+    text-shadow: 2px 2px 0 #996600, 4px 4px 0 #000;
+  }
+
+  .character-select-layout {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .character-grid-panel {
+    background: #111;
+    border: 3px solid #444;
+    padding: 0.8rem;
   }
 
   .character-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
-    justify-content: center;
   }
 
   .char-btn {
-    width: 50px;
-    height: 50px;
+    position: relative;
+    width: 70px;
+    height: 85px;
     padding: 0;
     border: 3px solid #555;
     background: #111;
     cursor: pointer;
     overflow: hidden;
+    transition: all 0.1s;
   }
 
   .char-btn:disabled {
@@ -1113,18 +1187,198 @@ const lobbyStyles = `
 
   .char-btn img {
     width: 100%;
-    height: 100%;
+    height: 60px;
     object-fit: cover;
+  }
+
+  .char-btn .char-name {
+    display: block;
+    font-size: 0.35rem;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 0.25rem;
+    text-align: center;
+  }
+
+  .char-btn .select-cursor {
+    position: absolute;
+    inset: -5px;
+    border: 3px solid #ffcc00;
+    animation: cursorBlink 0.3s step-end infinite;
+    pointer-events: none;
+  }
+
+  @keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   .char-btn:hover:not(:disabled) {
     border-color: #888;
-    transform: scale(1.1);
+    transform: scale(1.05);
+    z-index: 2;
   }
 
   .char-btn.selected {
     border-color: #ffcc00;
-    box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+  }
+
+  /* Character Preview Panel */
+  .character-preview-panel {
+    width: 250px;
+    flex-shrink: 0;
+  }
+
+  .preview-card {
+    background: #111;
+    border: 4px solid;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .preview-header {
+    padding: 0.6rem;
+    text-align: center;
+  }
+
+  .preview-name {
+    display: block;
+    font-size: 0.9rem;
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
+  }
+
+  .preview-title {
+    display: block;
+    font-size: 0.4rem;
+    color: rgba(255,255,255,0.8);
+    margin-top: 0.3rem;
+  }
+
+  .preview-portrait {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .preview-portrait img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border: 2px solid #333;
+  }
+
+  .preview-country {
+    background: #222;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .preview-country .country-flag-emoji {
+    font-size: 1.5rem;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  }
+
+  .preview-country .country-name {
+    font-size: 0.45rem;
+    color: #aaa;
+  }
+
+  .preview-description {
+    background: #0d0d1a;
+    padding: 0.6rem;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+  }
+
+  .preview-description p {
+    font-size: 0.4rem;
+    color: #ccc;
+    line-height: 1.8;
+    margin: 0;
+    text-align: center;
+  }
+
+  .preview-stats {
+    padding: 0.6rem;
+    background: #0a0a15;
+  }
+
+  .preview-stats .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .preview-stats .stat-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .preview-stats .stat-label {
+    width: 35px;
+    font-size: 0.4rem;
+    color: #888;
+  }
+
+  .preview-stats .stat-bar {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .preview-stats .stat-block {
+    width: 15px;
+    height: 10px;
+    background: #222;
+    border: 1px solid #333;
+  }
+
+  .preview-stats .stat-block.filled.power {
+    background: linear-gradient(180deg, #ff6666 0%, #cc0000 100%);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  }
+
+  .preview-stats .stat-block.filled.speed {
+    background: linear-gradient(180deg, #66aaff 0%, #0066cc 100%);
+    border-color: #0088ff;
+    box-shadow: 0 0 5px rgba(0, 136, 255, 0.5);
+  }
+
+  .preview-stats .stat-block.filled.defense {
+    background: linear-gradient(180deg, #66ff66 0%, #00cc00 100%);
+    border-color: #00ff00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  }
+
+  .preview-specialty {
+    background: #1a1a2e;
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .preview-specialty .specialty-label {
+    font-size: 0.35rem;
+    color: #888;
+  }
+
+  .preview-specialty .specialty-value {
+    font-size: 0.35rem;
+    color: #ff6600;
+    background: rgba(255, 102, 0, 0.2);
+    padding: 0.2rem 0.4rem;
+    border: 1px solid #ff6600;
   }
 
   .lobby-actions {
@@ -1317,9 +1571,48 @@ const lobbyStyles = `
       height: 50px;
     }
 
+    .character-select-section {
+      padding: 1rem;
+    }
+
+    .character-select-section h3 {
+      font-size: 0.7rem;
+    }
+
+    .character-select-layout {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .character-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
     .char-btn {
-      width: 40px;
-      height: 40px;
+      width: 55px;
+      height: 70px;
+    }
+
+    .char-btn img {
+      height: 48px;
+    }
+
+    .char-btn .char-name {
+      font-size: 0.3rem;
+    }
+
+    .character-preview-panel {
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .preview-portrait img {
+      height: 100px;
+    }
+
+    .preview-stats .stat-block {
+      width: 12px;
+      height: 8px;
     }
 
     .match-preview {
